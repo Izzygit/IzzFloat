@@ -1739,7 +1739,16 @@ static void float_thd(void *arg) {
 			new_pid_value = (d->float_conf.kp * d->proportional) + (d->float_conf.ki * d->integral);
 
 			d->last_proportional = d->proportional;
-
+			
+			// Current Limiting! MOVED SO WE CAN USE current_limit IN OUR BOOST CURRENT IF STATEMENT**********************************************
+			float current_limit;
+			if (d->braking) {
+				current_limit = d->mc_current_min * (1 + 0.6 * fabsf(d->torqueresponse_interpolated / 10));
+			}
+			else {
+				current_limit = d->mc_current_max * (1 + 0.6 * fabsf(d->torqueresponse_interpolated / 10));
+			}
+				
 			// Start Rate PID and Booster portion a few cycles later, after the start clicks have been emitted
 			// this keeps the start smooth and predictable
 			if (d->start_counter_clicks == 0) {
@@ -1780,12 +1789,25 @@ static void float_thd(void *arg) {
 						booster_angle /= angledivider;
 					}
 				}
-
-				if (d->abs_proportional > booster_angle) {
+				
+				if (boostbraking) { // If we are braking apply boost as normal
+					if (d->abs_proportional > booster_angle){ // Boost based only on angle
+						if (d->abs_proportional - booster_angle < booster_ramp) {
+							booster_current *= SIGN(true_proportional) *
+									((d->abs_proportional - booster_angle) / booster_ramp);
+						} elseif {
+							booster_current *= SIGN(true_proportional);
+						}
+					}
+					else {
+						booster_current = 0;
+					}
+				} else if (d->abs_proportional > booster_angle) && // Else we are accelerating and we want to check the angle*********************
+				 (new_pid_value > 0.7 * current_limit ){ // and the requested current to see if we are near max torque
 					if (d->abs_proportional - booster_angle < booster_ramp) {
 						booster_current *= SIGN(true_proportional) *
 								((d->abs_proportional - booster_angle) / booster_ramp);
-					} else {
+					} elseif {
 						booster_current *= SIGN(true_proportional);
 					}
 				}
@@ -1805,14 +1827,8 @@ static void float_thd(void *arg) {
 				new_pid_value += pid_mod;
 			}
 			
-			// Current Limiting!
-			float current_limit;
-			if (d->braking) {
-				current_limit = d->mc_current_min * (1 + 0.6 * fabsf(d->torqueresponse_interpolated / 10));
-			}
-			else {
-				current_limit = d->mc_current_max * (1 + 0.6 * fabsf(d->torqueresponse_interpolated / 10));
-			}
+
+			//APPLY CURRENT LIMITING****************************************************************************************************************
 			if (fabsf(new_pid_value) > current_limit) {
 				new_pid_value = SIGN(new_pid_value) * current_limit;
 			}
