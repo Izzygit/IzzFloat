@@ -1061,6 +1061,25 @@ static void apply_inputtilt(data *d){ // Input Tiltback
 	// 	}
 	// }
 
+	//Sticky Tilt Input Start
+	float stickytilt_val = 3.0 //Value that defines where tilt will stick for both nose up and down. Can be made UI input later.
+	// Value of 0 or above max disables. Max value <=  d->float_conf.inputtilt_angle_limit. 
+	
+	if ((fabsf(d->inputtilt_interpolated) - fabsf(input_tiltback_target)) > 0){ // If the target is travelling toward or at the center
+		if ((fabsf(d->inputtilt_interpolated) >  (stickytilt_val - inputtilt_step_size * 0.51)) && 
+		 (fabsf(d->inputtilt_interpolated) < (stickytilt_val + inputtilt_step_size * 0.51)){
+		//If we are close to our sticky tilt value (the range,+/-51% step size, is so you don't over step the sticky value.)
+			if (SIGN(d->inputtilt_interpolated)==((d->throttle_val == 0.0) ? SIGN(d->inputtilt_interpolated) : SIGN(d->throttle_val))){   
+		 	// If the throttle is at zero or not pushed to the opposite direction from sticky tilt value. 
+				input_tiltback_target=stickytilt_val * SIGN(d->inputtilt_interpolated); // stay at our sticky tilt value
+			} else {
+				input_tiltback_target=(stickytilt_val - inputtilt_step_size) * SIGN(d->inputtilt_interpolated); 
+				// release target to below sticky tilt value range, defined above, when throttle pushed in opposite direction                                             
+			}                
+                } 
+        }
+	//Sticky Tilt Input End
+		    
 	if (fabsf(input_tiltback_target - d->inputtilt_interpolated) < d->inputtilt_step_size){
 		d->inputtilt_interpolated = input_tiltback_target;
 	} else if (input_tiltback_target - d->inputtilt_interpolated > 0){
