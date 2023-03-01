@@ -1,6 +1,10 @@
 # IzzFLOAT
 My personal changes to the VESC Float Package
 
+Version 0.9.0.1
+
+-Adds sticky tilt input with hardcoded value of 3.0
+
 <H2>Readme from FLOAT</H2>
 Based on Mitch Lustig's original Balance Package, but specifically tailored for one wheeled skateboards, as invented by Ben Smither in 2007: http://www.robosys.co.uk/
 
