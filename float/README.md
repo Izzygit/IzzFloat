@@ -1,4 +1,7 @@
-# FLOAT (BETA)
+# IzzFLOAT
+My personal changes to the VESC Float Package
+
+<H2>Readme from FLOAT</H2>
 Based on Mitch Lustig's original Balance Package, but specifically tailored for one wheeled skateboards, as invented by Ben Smither in 2007: http://www.robosys.co.uk/
 
 Removes unneeded parameters, adds new features and behaviors, and has a more user-friendly configuration menu with usable default/min/max values and informative Help text.
