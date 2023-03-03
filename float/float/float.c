@@ -1807,8 +1807,9 @@ static void float_thd(void *arg) {
 			
 			// Current Limiting! Updated with acceleration surge code.
 			float current_limit;
-			float surge_margin = 0.8; //Establish current limit that surge engages. 1 to disable.
-			float surge_period = 1; //Seconds between each surge
+			float surge_margin = 0.8; //Establish current limit that surge engages, in percent. 1 to disable.
+			float surge_period = 1; //Period between each surge, in seconds
+			float surge_cycle= 0.5; //How much of the period with be at surge current, in percent
 			if (d->braking) {
 				current_limit = d->mc_current_min * (1 + 0.6 * fabsf(d->torqueresponse_interpolated / 10));
 				//Not changed. Normal application for braking.
@@ -1822,16 +1823,15 @@ static void float_thd(void *arg) {
 			if (fabsf(new_pid_value) > current_limit) {
 				if(d->braking){ // Normal current limiting for braking
 					new_pid_value = SIGN(new_pid_value) * current_limit;
-				} else if (d->current_time - d->overcurrent_timer < surge_period/2){
-					//Engage surge when we are accelerating beyond the limit but only for half surge period at a time
+				} else if ((d->current_time - d->overcurrent_timer) < (surge_period * surge_cycle)){
+					//Engage surge when we are accelerating beyond the limit but only for the surge cycle portion of our period
 					new_pid_value = SIGN(new_pid_value) * current_limit / surge_margin; 
 					//Allow a current limit which is not reduced by surge margin
-				} else if (d->current_time - d->overcurrent_timer < surge_period){
-					// disengage surge when we greater than half surge period but less than surge period
+				} else if ((d->current_time - d->overcurrent_timer) < surge_period){
+					//Disengage surge after the surge cycle to provide current limited by surge margin for the rest of the period
 					new_pid_value = SIGN(new_pid_value) * current_limit;
-					//Current now reduced by surge margin.
 				} else {
-					d->overcurrent_timer = d->current_time; //reset timer after surge period
+					d->overcurrent_timer = d->current_time; //Reset timer after surge period.
 				}
 			}
 				
