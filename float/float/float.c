@@ -1805,18 +1805,38 @@ static void float_thd(void *arg) {
 				new_pid_value += pid_mod;
 			}
 			
-			// Current Limiting!
+			// Current Limiting! Updated with acceleration surge code.
 			float current_limit;
+			float surge_margin = 0.8; //Establish current limit that surge engages. 1 to disable.
+			float surge_period = 1; //Seconds between each surge
 			if (d->braking) {
 				current_limit = d->mc_current_min * (1 + 0.6 * fabsf(d->torqueresponse_interpolated / 10));
+				//Not changed. Normal application for braking.
 			}
 			else {
-				current_limit = d->mc_current_max * (1 + 0.6 * fabsf(d->torqueresponse_interpolated / 10));
+				current_limit = d->mc_current_max * (1 + 0.6 * fabsf(d->torqueresponse_interpolated / 10)) * surge_margin;
+				//Use surge margin to reduce max current during acceleration.
 			}
+			
+			//Check for current limit and apply surge
 			if (fabsf(new_pid_value) > current_limit) {
-				new_pid_value = SIGN(new_pid_value) * current_limit;
+				if(d->braking){ // Normal current limiting for braking
+					new_pid_value = SIGN(new_pid_value) * current_limit;
+				} else if (d->current_time - d->overcurrent_timer < surge_period/2){
+					//Engage surge when we are accelerating beyond the limit but only for half surge period at a time
+					new_pid_value = SIGN(new_pid_value) * current_limit / surge_margin; 
+					//Allow a current limit which is not reduced by surge margin
+				} else if (d->current_time - d->overcurrent_timer < surge_period){
+					// disengage surge when we greater than half surge period but less than surge period
+					new_pid_value = SIGN(new_pid_value) * current_limit;
+					//Current now reduced by surge margin.
+				} else {
+					d->overcurrent_timer = d->current_time; //reset timer after surge period
+				}
 			}
-			else {
+				
+			//Commented out temporarily because overcurrent_timer is being used for surge
+			/*else {
 				// Over continuous current for more than 3 seconds? Just beep, don't actually limit currents
 				if (fabsf(d->atr_filtered_current) < d->max_continuous_current) {
 					d->overcurrent_timer = d->current_time;
@@ -1830,7 +1850,7 @@ static void float_thd(void *arg) {
 						d->current_beeping = true;
 					}
 				}
-			}
+			}*/
 			
 			if (d->traction_control) {
 				// freewheel while traction loss is detected
