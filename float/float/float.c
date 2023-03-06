@@ -207,6 +207,8 @@ typedef struct {
 	
 	// Feature: Surge
 	float presurge_duty;
+	float surge_timer;
+	bool surge;
 		
 	// Log values
 	float float_setpoint, float_atr, float_braketilt, float_torquetilt, float_turntilt, float_inputtilt;
@@ -1826,10 +1828,7 @@ static void float_thd(void *arg) {
 			
 			// Current Limiting! Updated with acceleration surge code.
 			float current_limit;
-			float surge_margin = 0.05; //Increased duty, in percent
-			float surge_period = 1; //Period between each surge, in seconds
-			float surge_cycle= 0.5; //How much of the period with be at surge current, in percent
-			float new_duty_value = 0; 
+
 			if (d->braking) {
 				current_limit = d->mc_current_min * (1 + 0.6 * fabsf(d->torqueresponse_interpolated / 10));
 			}
@@ -1838,25 +1837,31 @@ static void float_thd(void *arg) {
 			}
 			
 			//Check for current limit and apply surge
+			float surge_margin = 0.05; //Increased duty, in percent
+			float surge_period = 1; //Period between each surge, in seconds
+			float surge_cycle= 0.5; //How much of the period with be at surge current, in percent
+			float new_duty_value = 0; 
+			
 			if (fabsf(new_pid_value) > current_limit) {
-				if(d->braking){ // Normal current limiting for braking, no surge
-					new_pid_value = SIGN(new_pid_value) * current_limit;
-				} else if ((d->current_time - d->overcurrent_timer) < (surge_period * surge_cycle)){
-					//Engage surge when we are accelerating at the limit but only for the surge cycle portion of our period
-					new_pid_value = SIGN(new_pid_value) * current_limit; 
-					new_duty_value = d->presurge_duty * (1 + surge_margin); // Apply surge
-				} else if ((d->current_time - d->overcurrent_timer) < surge_period){
+				new_pid_value = SIGN(new_pid_value) * current_limit;
+				if !(d->braking) { // Don't surge for braking
+					if ((d->current_time - d->surge_timer) < (surge_period * surge_cycle)){
+					//Engage surge only for the surge cycle portion of our period
+						new_duty_value = d->presurge_duty * (1 + surge_margin); // Apply surge
+						d->surge = true;
+					} else if ((d->current_time - d->surge_timer) < surge_period){
 					//Disengage surge after the surge cycle 
-					new_pid_value = SIGN(new_pid_value) * current_limit;
-					new_duty_value = d->presurge_duty; // Return to pre-surge duty
-				} else {
-					d->overcurrent_timer = d->current_time; //Reset timer after surge period.
-					d->presurge_duty = d->duty_cycle; //Ouside of timer so set pre-surge duty
+						new_duty_value = d->presurge_duty; // Return to pre-surge duty
+						d->surge = true;
+					} else {
+						d->surge_timer = d->current_time; //Reset timer after surge period.
+						d->presurge_duty = d->duty_cycle; //Outside of surge timer so set pre-surge duty
+						d->surge = false; // Surge time out
+					}
 				}
-			}
+			} else {
+				d->surge = false; // Do not surge if we are not at the current limit
 				
-			//Commented out temporarily because overcurrent_timer is being used for surge
-			/*else {
 				// Over continuous current for more than 3 seconds? Just beep, don't actually limit currents
 				if (fabsf(d->atr_filtered_current) < d->max_continuous_current) {
 					d->overcurrent_timer = d->current_time;
@@ -1870,7 +1875,7 @@ static void float_thd(void *arg) {
 						d->current_beeping = true;
 					}
 				}
-			}*/
+			}
 			
 			if (d->traction_control) {
 				// freewheel while traction loss is detected
@@ -1900,10 +1905,10 @@ static void float_thd(void *arg) {
 					set_current(d, d->pid_value - d->float_conf.startup_click_current);
 				else
 					set_current(d, d->pid_value + d->float_conf.startup_click_current);
-			} else if ((d->current_time - d->overcurrent_timer) < surge_period) { //If we are within the surge period
+			} else if (d->surge && !(d->traction_control)) { //If we are within the surge period and not in traction control status
 				set_dutycycle(d, d->duty_cycle); // Set the duty
 			} else {
-				set_current(d, d->pid_value); // If we are not surging set current as normal.
+				set_current(d, d->pid_value); // If we are not surging or we are in traction control set current as normal.
 			}
 
 			break;
@@ -2125,9 +2130,12 @@ static void send_realtime_data(data *d){
 	buffer_append_float32_auto(send_buffer, d->float_inputtilt, &ind);
 	
 	// DEBUG
-	buffer_append_float32_auto(send_buffer, d->true_pitch_angle, &ind);
-	buffer_append_float32_auto(send_buffer, d->atr_filtered_current, &ind);
-	buffer_append_float32_auto(send_buffer, d->float_acc_diff, &ind);
+//Changed temporarily	buffer_append_float32_auto(send_buffer, d->true_pitch_angle, &ind);
+//Changed temporarily	buffer_append_float32_auto(send_buffer, d->atr_filtered_current, &ind);
+//Changed temporarily	buffer_append_float32_auto(send_buffer, d->float_acc_diff, &ind);
+	buffer_append_float32_auto(send_buffer, d->surge_timer , &ind); //Added for surge debug
+	buffer_append_float32_auto(send_buffer, d->presurge_duty, &ind); //Added for surge debug
+	buffer_append_float32_auto(send_buffer, d->duty_cycle, &ind); //Added for surge debug
 	buffer_append_float32_auto(send_buffer, d->applied_booster_current, &ind);
 	buffer_append_float32_auto(send_buffer, d->motor_current, &ind);
 	buffer_append_float32_auto(send_buffer, d->throttle_val, &ind);
