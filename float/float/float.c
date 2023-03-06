@@ -204,7 +204,10 @@ typedef struct {
 	int rc_counter;
 	float rc_current_target;
 	float rc_current;
-
+	
+	// Feature: Surge
+	float presurge_duty;
+		
 	// Log values
 	float float_setpoint, float_atr, float_braketilt, float_torquetilt, float_turntilt, float_inputtilt;
 	float float_expected_acc, float_measured_acc, float_acc_diff;
@@ -1501,6 +1504,22 @@ static void set_current(data *d, float current){
 	VESC_IF->mc_set_current(current);
 }
 
+
+static void set_dutycycle(data *d, float dutyCyle){
+	// Limit duty output to configured max output
+	if (dutyCyle >  VESC_IF->get_cfg_float(CFG_PARAM_l_max_duty)) {
+		dutyCyle = VESC_IF->get_cfg_float(CFG_PARAM_l_current_max);
+	} 
+
+	// Reset the timeout
+	VESC_IF->timeout_reset();
+	// Set the current delay
+	VESC_IF->mc_set_current_off_delay(d->motor_timeout_seconds);
+	// Set Duty
+	VESC_IF->mc_set_duty(dutyCyle); //Alternatively mc_set_duty_noramp
+}
+
+
 static void imu_ref_callback(float *acc, float *gyro, float *mag, float dt) {
 	UNUSED(mag);
 	data *d = (data*)ARG;
@@ -1807,31 +1826,32 @@ static void float_thd(void *arg) {
 			
 			// Current Limiting! Updated with acceleration surge code.
 			float current_limit;
-			float surge_margin = 0.8; //Establish current limit that surge engages, in percent. 1 to disable.
+			float surge_margin = 0.05; //Increased duty, in percent
 			float surge_period = 1; //Period between each surge, in seconds
 			float surge_cycle= 0.5; //How much of the period with be at surge current, in percent
+			float new_duty_value = 0; 
 			if (d->braking) {
 				current_limit = d->mc_current_min * (1 + 0.6 * fabsf(d->torqueresponse_interpolated / 10));
-				//Not changed. Normal application for braking.
 			}
 			else {
-				current_limit = d->mc_current_max * (1 + 0.6 * fabsf(d->torqueresponse_interpolated / 10)) * surge_margin;
-				//Use surge margin to reduce max current during acceleration.
+				current_limit = d->mc_current_max * (1 + 0.6 * fabsf(d->torqueresponse_interpolated / 10));
 			}
 			
 			//Check for current limit and apply surge
 			if (fabsf(new_pid_value) > current_limit) {
-				if(d->braking){ // Normal current limiting for braking
+				if(d->braking){ // Normal current limiting for braking, no surge
 					new_pid_value = SIGN(new_pid_value) * current_limit;
 				} else if ((d->current_time - d->overcurrent_timer) < (surge_period * surge_cycle)){
-					//Engage surge when we are accelerating beyond the limit but only for the surge cycle portion of our period
-					new_pid_value = SIGN(new_pid_value) * current_limit / surge_margin; 
-					//Allow a current limit which is not reduced by surge margin
+					//Engage surge when we are accelerating at the limit but only for the surge cycle portion of our period
+					new_pid_value = SIGN(new_pid_value) * current_limit; 
+					new_duty_value = d->presurge_duty * (1 + surge_margin); // Apply surge
 				} else if ((d->current_time - d->overcurrent_timer) < surge_period){
-					//Disengage surge after the surge cycle to provide current limited by surge margin for the rest of the period
+					//Disengage surge after the surge cycle 
 					new_pid_value = SIGN(new_pid_value) * current_limit;
+					new_duty_value = d->presurge_duty; // Return to pre-surge duty
 				} else {
 					d->overcurrent_timer = d->current_time; //Reset timer after surge period.
+					d->presurge_duty = d->duty_cycle; //Ouside of timer so set pre-surge duty
 				}
 			}
 				
@@ -1868,6 +1888,7 @@ static void float_thd(void *arg) {
 				}
 				else {
 					d->pid_value = d->pid_value * 0.8 + new_pid_value * 0.2;
+					d->duty_cycle = d->duty_cycle * 0.8 + new_duty_value * 0.2;
 				}
 			}
 
@@ -1879,9 +1900,10 @@ static void float_thd(void *arg) {
 					set_current(d, d->pid_value - d->float_conf.startup_click_current);
 				else
 					set_current(d, d->pid_value + d->float_conf.startup_click_current);
-			}
-			else {
-				set_current(d, d->pid_value);
+			} else if ((d->current_time - d->overcurrent_timer) < surge_period) { //If we are within the surge period
+				set_dutycycle(d, d->duty_cycle); // Set the duty
+			} else {
+				set_current(d, d->pid_value); // If we are not surging set current as normal.
 			}
 
 			break;
