@@ -1837,31 +1837,20 @@ static void float_thd(void *arg) {
 			}
 			
 			//Check for current limit and apply surge
-			float surge_margin = 0.05; //Increased duty, in percent
+			float surge_margin = 0.2; //Increased duty
 			float surge_period = 1; //Period between each surge, in seconds
 			float surge_cycle= 0.5; //How much of the period with be at surge current, in percent
 			float new_duty_value = 0; 
 			
 			if (fabsf(new_pid_value) > current_limit) {
 				new_pid_value = SIGN(new_pid_value) * current_limit;
-				if !(d->braking) { // Don't surge for braking
-					if ((d->current_time - d->surge_timer) < (surge_period * surge_cycle)){
-					//Engage surge only for the surge cycle portion of our period
-						new_duty_value = d->presurge_duty * (1 + surge_margin); // Apply surge
-						d->surge = true;
-					} else if ((d->current_time - d->surge_timer) < surge_period){
-					//Disengage surge after the surge cycle 
-						new_duty_value = d->presurge_duty; // Return to pre-surge duty
-						d->surge = true;
-					} else {
-						d->surge_timer = d->current_time; //Reset timer after surge period.
-						d->presurge_duty = d->duty_cycle; //Outside of surge timer so set pre-surge duty
-						d->surge = false; // Surge time out
-					}
+				if (!d->braking && ((d->current_time - d->surge_timer) > surge_period)) { 
+					// Don't surge for braking or during a current surge
+					d->surge = true;
+					d->surge_timer = d->current_time;
+					d->presurge_duty = d->duty_cycle; //Set pre-surge duty
 				}
 			} else {
-				d->surge = false; // Do not surge if we are not at the current limit
-				
 				// Over continuous current for more than 3 seconds? Just beep, don't actually limit currents
 				if (fabsf(d->atr_filtered_current) < d->max_continuous_current) {
 					d->overcurrent_timer = d->current_time;
@@ -1877,6 +1866,20 @@ static void float_thd(void *arg) {
 				}
 			}
 			
+			if (d->surge){	
+				if ((d->current_time - d->surge_timer) < (surge_period * surge_cycle)){
+				//Engage surge only for the surge cycle portion of our period
+					new_duty_value = d->presurge_duty + surge_margin; // Apply surge
+					d->surge = true;
+				} else if ((d->current_time - d->surge_timer) < surge_period){
+				//Disengage surge after the surge cycle 
+					new_duty_value = d->presurge_duty; // Return to pre-surge duty
+					d->surge = true;
+				} else {
+					d->surge = false; // Surge time out
+				}
+			}
+				
 			if (d->traction_control) {
 				// freewheel while traction loss is detected
 				d->pid_value = 0;
@@ -1905,7 +1908,7 @@ static void float_thd(void *arg) {
 					set_current(d, d->pid_value - d->float_conf.startup_click_current);
 				else
 					set_current(d, d->pid_value + d->float_conf.startup_click_current);
-			} else if (d->surge && !(d->traction_control)) { //If we are within the surge period and not in traction control status
+			} else if (d->surge && !d->traction_control) { //If we are within the surge period and not in traction control status
 				set_dutycycle(d, d->duty_cycle); // Set the duty
 			} else {
 				set_current(d, d->pid_value); // If we are not surging or we are in traction control set current as normal.
