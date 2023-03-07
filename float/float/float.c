@@ -1836,13 +1836,12 @@ static void float_thd(void *arg) {
 				current_limit = d->mc_current_max * (1 + 0.6 * fabsf(d->torqueresponse_interpolated / 10));
 			}
 			
-			//Check for current limit and apply surge
 			float surge_margin = 0.2; //Increased duty
 			float surge_period = 1; //Period between each surge, in seconds
-			float surge_cycle= 0.5; //How much of the period with be at surge current, in percent
+			float surge_cycle= 0.25; //How much of the period with be at surge current, in percent
 			float new_duty_value = 0; 
 			
-			if (fabsf(new_pid_value) > current_limit) {
+			if (fabsf(new_pid_value) > current_limit) { //Check for current limit and apply surge
 				new_pid_value = SIGN(new_pid_value) * current_limit;
 				if (!d->braking && ((d->current_time - d->surge_timer) > surge_period)) { 
 					// Don't surge for braking or during an active surge period
@@ -1869,7 +1868,7 @@ static void float_thd(void *arg) {
 			if (d->surge){	
 				if ((d->current_time - d->surge_timer) < (surge_period * surge_cycle)){
 				//Engage surge only for the surge cycle portion of our period
-					new_duty_value = d->presurge_duty + surge_margin; // Apply surge
+					new_duty_value = d->presurge_duty + SIGN(d->presurge_duty) * surge_margin; // Apply surge
 					d->surge = true;
 				} else if ((d->current_time - d->surge_timer) < surge_period){
 				//Disengage surge after the surge cycle 
