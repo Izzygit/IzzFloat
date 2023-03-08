@@ -1836,9 +1836,9 @@ static void float_thd(void *arg) {
 				current_limit = d->mc_current_max * (1 + 0.6 * fabsf(d->torqueresponse_interpolated / 10));
 			}
 			
-			float surge_margin = 0.05; //Increased duty
+			float surge_margin = 0.08; //Increased duty
 			float surge_period = 3; //Period between each surge, in seconds
-			float surge_cycle= 0.4; //How much of the period with be at surge current, in seconds
+			float surge_cycle= 0.15; //How much of the period with be at surge current, in seconds
 			float new_duty_value = 0; 
 			
 			if (fabsf(new_pid_value) > current_limit) { //Check for current limit and apply surge
@@ -1884,16 +1884,15 @@ static void float_thd(void *arg) {
 				d->pid_value = 0;
 			}
 			else {
-				// Brake Amp Rate Limiting
-				if (d->braking && (fabsf(d->pid_value - new_pid_value) > d->pid_brake_increment)) {
+				if ((d->current_time - d->surge_timer) < surge_cycle){
+					d->duty_cycle = d->duty_cycle * 0.8 + new_duty_value * 0.2; // Increment duty during surge
+				} else if (d->braking && (fabsf(d->pid_value - new_pid_value) > d->pid_brake_increment)) { // Brake Amp Rate Limiting
 					if (new_pid_value > d->pid_value) {
 						d->pid_value += d->pid_brake_increment;
 					}
 					else {
 						d->pid_value -= d->pid_brake_increment;
 					}
-				} else if ((d->current_time - d->surge_timer) < surge_cycle){
-					d->duty_cycle = d->duty_cycle * 0.8 + new_duty_value * 0.2; // Increment duty during surge
 				} else {
 					d->pid_value = d->pid_value * 0.8 + new_pid_value * 0.2; 
 					//don't increment current during surge to prevent overreactions
