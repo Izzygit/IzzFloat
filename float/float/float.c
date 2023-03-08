@@ -2137,8 +2137,8 @@ static void send_realtime_data(data *d){
 //Changed temporarily	buffer_append_float32_auto(send_buffer, d->atr_filtered_current, &ind);
 //Changed temporarily	buffer_append_float32_auto(send_buffer, d->float_acc_diff, &ind);
 	buffer_append_float32_auto(send_buffer, d->surge_timer , &ind); //Added for surge debug
+	buffer_append_float32_auto(send_buffer, d->current_time, &ind); //Added for surge debug
 	buffer_append_float32_auto(send_buffer, d->presurge_duty, &ind); //Added for surge debug
-	buffer_append_float32_auto(send_buffer, d->duty_cycle, &ind); //Added for surge debug
 	buffer_append_float32_auto(send_buffer, d->applied_booster_current, &ind);
 	buffer_append_float32_auto(send_buffer, d->motor_current, &ind);
 	buffer_append_float32_auto(send_buffer, d->throttle_val, &ind);
