@@ -1839,7 +1839,7 @@ static void float_thd(void *arg) {
 			float surge_margin = 0.2; //Increased duty
 			float surge_period = 1; //Period between each surge, in seconds
 			float surge_cycle = 0.15; //How much of the period with be at surge duty, in seconds
-			float surge_ramp = 0.10 //How long until reaching 90% maximum surge duty, in seconds. surge_ramp<=surge_cycle
+			float surge_ramp = 0.10 //How long until reaching 90% maximum surge duty, in seconds. 0 < surge_ramp <= surge_cycle
 			float surge_anglemin = 0.2 // Minimum d->proportional required to ensure we are continuously at an acceleration angle
 			float duty_increment = 0.002716 * pow(surge_ramp, -1.009702) //Formula to calc increment based on time to 90% target value at 832hz
 			//no longe rused float new_duty_value = 0; 
@@ -1886,9 +1886,9 @@ static void float_thd(void *arg) {
 			if (d->traction_control) {
 				d->pid_value = 0; // freewheel while traction loss is detected
 			} else if (((d->current_time - d->surge_timer) < surge_cycle) && 	//Within the surge cycle portion of the surge period
-			 (d->proportional > surge_anglemin)){ 					//and pitch is angled for acceleration
+			 (fabsf(d->proportional - SIGN(d->erpm)*surge_anglemin) > 0)){ 		//and pitch meets our minimum angle to ensure acceleration
 				d->duty_cycle = d->duty_cycle * (1-duty_increment) + (d->presurge_duty + SIGN(d->presurge_duty) * surge_margin) * duty_increment; 
-				// Increment duty during surge based on presurge duty at start of cycle, surge margin, and ramp rate
+				// Increment duty during surge cycle based on presurge duty at start of cycle, surge margin, and ramp rate
 			} else if (d->braking && (fabsf(d->pid_value - new_pid_value) > d->pid_brake_increment)) { // Brake Amp Rate Limiting
 				if (new_pid_value > d->pid_value) {
 					d->pid_value += d->pid_brake_increment;
@@ -1908,12 +1908,14 @@ static void float_thd(void *arg) {
 					set_current(d, d->pid_value - d->float_conf.startup_click_current);
 				else
 					set_current(d, d->pid_value + d->float_conf.startup_click_current);
-			} else if (!d->traction_control && 			//Not in traction control
-			 ((d->current_time - d->surge_timer) < surge_cycle) && 	//Within the surge cycle of the surge period
-			 (d->proportional > surge_anglemin)) { 			//Pitch is angled for acceleration
-				set_dutycycle(d, d->duty_cycle); 		// Set the duty to surge
+			} else if (!d->traction_control && 					//Not in traction control
+			 ((d->current_time - d->surge_timer) < surge_cycle) && 			//Within the surge cycle of the surge period
+			 (fabsf(d->proportional - SIGN(d->erpm)*surge_anglemin) > 0)) { 	//Pitch meets our minimum angle to ensure acceleration
+													//Without this condition the board can overreact, 
+													//tilt back, and brake abruptly when surge cycle is over
+				set_dutycycle(d, d->duty_cycle); 				//Set the duty to surge
 			} else {
-				set_current(d, d->pid_value); // If we are not surging or we are in traction control set current as normal.
+				set_current(d, d->pid_value); // If we are not surging, in traction control, or tilted back, set current as normal.
 			}
 
 			break;
