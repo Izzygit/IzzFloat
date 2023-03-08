@@ -831,7 +831,7 @@ static void calculate_setpoint_target(data *d) {
 				}
 			}
 		}
-	} else if ((fabs(d->acceleration) > 10) &&					// this isn't normal, either wheelslip or wheel getting stuck
+	} else if ((fabs(d->acceleration) > 15) &&					// this isn't normal, either wheelslip or wheel getting stuck
 			  (SIGN(d->acceleration) == SIGN(d->erpm)) &&		// we only act on wheelslip, not when the wheel gets stuck
 			  (d->abs_duty_cycle > 0.3) &&
 			  (d->abs_erpm > 1500))								// acceleration can jump a lot at very low speeds
@@ -843,7 +843,7 @@ static void calculate_setpoint_target(data *d) {
 			d->traction_control = true;
 		}
 	} else if (d->state == RUNNING_WHEELSLIP) {
-		if (fabsf(d->acceleration) < 10) {
+		if (fabsf(d->acceleration) < 15) {
 			// acceleration is slowing down, traction control seems to have worked
 			d->traction_control = false;
 		}
@@ -1836,9 +1836,9 @@ static void float_thd(void *arg) {
 				current_limit = d->mc_current_max * (1 + 0.6 * fabsf(d->torqueresponse_interpolated / 10));
 			}
 			
-			float surge_margin = 0.1; //Increased duty
+			float surge_margin = 0.05; //Increased duty
 			float surge_period = 3; //Period between each surge, in seconds
-			float surge_cycle= 0.2; //How much of the period with be at surge current, in seconds
+			float surge_cycle= 0.4; //How much of the period with be at surge current, in seconds
 			float new_duty_value = 0; 
 			
 			if (fabsf(new_pid_value) > current_limit) { //Check for current limit and apply surge
@@ -1892,11 +1892,12 @@ static void float_thd(void *arg) {
 					else {
 						d->pid_value -= d->pid_brake_increment;
 					}
-				}
-				else {
-					d->pid_value = d->pid_value * 0.8 + new_pid_value * 0.2;
-					d->duty_cycle = d->duty_cycle * 0.8 + new_duty_value * 0.2;
-				}
+				} else if ((d->current_time - d->surge_timer) < surge_cycle){
+					d->duty_cycle = d->duty_cycle * 0.8 + new_duty_value * 0.2; // Increment duty during surge
+				} else {
+					d->pid_value = d->pid_value * 0.8 + new_pid_value * 0.2; 
+					//don't increment current during surge to prevent overreactions
+				|
 			}
 
 			// Output to motor
