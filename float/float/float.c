@@ -1836,9 +1836,9 @@ static void float_thd(void *arg) {
 				current_limit = d->mc_current_max * (1 + 0.6 * fabsf(d->torqueresponse_interpolated / 10));
 			}
 			
-			float surge_margin = 0.0; //Increased duty
+			float surge_margin = 0.05; //Increased duty
 			float surge_period = 5; //Period between each surge, in seconds
-			float surge_cycle= 0.05; //How much of the period with be at surge current, in seconds
+			float surge_cycle= 0.1; //How much of the period with be at surge current, in seconds
 			float new_duty_value = 0; 
 			
 			if (fabsf(new_pid_value) > current_limit) { //Check for current limit and apply surge
