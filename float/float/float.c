@@ -1836,9 +1836,9 @@ static void float_thd(void *arg) {
 				current_limit = d->mc_current_max * (1 + 0.6 * fabsf(d->torqueresponse_interpolated / 10));
 			}
 			
-			float surge_margin = 0.2; //Increased duty
-			float surge_period = 1; //Period between each surge, in seconds
-			float surge_cycle= 0.25; //How much of the period with be at surge current, in percent
+			float surge_margin = 0.0; //Increased duty
+			float surge_period = 5; //Period between each surge, in seconds
+			float surge_cycle= 0.05; //How much of the period with be at surge current, in seconds
 			float new_duty_value = 0; 
 			
 			if (fabsf(new_pid_value) > current_limit) { //Check for current limit and apply surge
@@ -1866,7 +1866,7 @@ static void float_thd(void *arg) {
 			}
 			
 			if (d->surge){	
-				if ((d->current_time - d->surge_timer) < (surge_period * surge_cycle)){
+				if ((d->current_time - d->surge_timer) < surge_cycle){
 				//Engage surge only for the surge cycle portion of our period
 					new_duty_value = d->presurge_duty + SIGN(d->presurge_duty) * surge_margin; // Apply surge
 					d->surge = true;
@@ -1907,8 +1907,8 @@ static void float_thd(void *arg) {
 					set_current(d, d->pid_value - d->float_conf.startup_click_current);
 				else
 					set_current(d, d->pid_value + d->float_conf.startup_click_current);
-			} else if (d->surge && !d->traction_control &&  ((d->current_time - d->surge_timer) < (surge_period * surge_cycle))) { 
-				//If we are within the surge period, not in traction control status, and within the surge cycle
+			} else if (!d->traction_control && ((d->current_time - d->surge_timer) < surge_cycle)) { 
+				//If we are not in traction control status, and within the surge cycle
 				set_dutycycle(d, d->duty_cycle); // Set the duty to surge
 			} else {
 				set_current(d, d->pid_value); // If we are not surging or we are in traction control set current as normal.
