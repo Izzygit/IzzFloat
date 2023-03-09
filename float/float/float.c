@@ -2144,10 +2144,14 @@ static void send_realtime_data(data *d){
 	// Setpoints
 	buffer_append_float32_auto(send_buffer, d->float_setpoint, &ind);
 	buffer_append_float32_auto(send_buffer, d->float_atr, &ind);
-	buffer_append_float32_auto(send_buffer, d->float_braketilt, &ind);
-	buffer_append_float32_auto(send_buffer, d->float_torquetilt, &ind);
-	buffer_append_float32_auto(send_buffer, d->float_turntilt, &ind);
-	buffer_append_float32_auto(send_buffer, d->float_inputtilt, &ind);
+	//Changed temporarily	buffer_append_float32_auto(send_buffer, d->float_braketilt, &ind);
+	//Changed temporarily	buffer_append_float32_auto(send_buffer, d->float_torquetilt, &ind);
+	//Changed temporarily	buffer_append_float32_auto(send_buffer, d->float_turntilt, &ind);
+	//Changed temporarily	buffer_append_float32_auto(send_buffer, d->float_inputtilt, &ind);
+	buffer_append_float32_auto(send_buffer, surge_margin, &ind);//Added for surge debug
+	buffer_append_float32_auto(send_buffer, surge_cycle, &ind);//Added for surge debug
+	buffer_append_float32_auto(send_buffer, surge_ramp, &ind);//Added for surge debug
+	buffer_append_float32_auto(send_buffer, duty_increment, &ind);//Added for surge debug
 	
 	// DEBUG
 //Changed temporarily	buffer_append_float32_auto(send_buffer, d->true_pitch_angle, &ind);
