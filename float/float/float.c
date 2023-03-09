@@ -208,6 +208,7 @@ typedef struct {
 	// Feature: Surge
 	float presurge_duty;
 	float surge_timer;
+	bool surge;
 	float debug1;
 	float debug2;
 	float debug3;
@@ -812,7 +813,13 @@ static void calculate_setpoint_target(data *d) {
 	if (input_voltage < d->float_conf.tiltback_hv) {
 		d->tb_highvoltage_timer = d->current_time;
 	}
-
+	
+	//Adjust acceleration limit for wheel slip condition if we are surging
+	float accel_limit = 15; 
+	if (d->surge){
+		accel_limit = 30;
+	}
+	
 	if (d->setpointAdjustmentType == CENTERING && d->setpoint_target_interpolated != d->setpoint_target) {
 		// Ignore tiltback during centering sequence
 		d->state = RUNNING;
@@ -833,10 +840,10 @@ static void calculate_setpoint_target(data *d) {
 				}
 			}
 		}
-	} else if ((fabs(d->acceleration) > 30) &&					// this isn't normal, either wheelslip or wheel getting stuck
+	} else if ((fabs(d->acceleration) > accel_limit) &&			// this isn't normal, either wheelslip or wheel getting stuck
 			  (SIGN(d->acceleration) == SIGN(d->erpm)) &&		// we only act on wheelslip, not when the wheel gets stuck
 			  (d->abs_duty_cycle > 0.3) &&
-			  (d->abs_erpm > 1500))								// acceleration can jump a lot at very low speeds
+			  (d->abs_erpm > 1500))					// acceleration can jump a lot at very low speeds
 	{
 		d->state = RUNNING_WHEELSLIP;
 		d->setpointAdjustmentType = TILTBACK_NONE;
@@ -845,7 +852,7 @@ static void calculate_setpoint_target(data *d) {
 			d->traction_control = true;
 		}
 	} else if (d->state == RUNNING_WHEELSLIP) {
-		if (fabsf(d->acceleration) < 30) {
+		if (fabsf(d->acceleration) < accel_limit) {
 			// acceleration is slowing down, traction control seems to have worked
 			d->traction_control = false;
 		}
@@ -1847,12 +1854,12 @@ static void float_thd(void *arg) {
 			//no longer used float new_duty_value = 0; 
 			
 			if (fabsf(new_pid_value) > current_limit) { //Check for current limit and surge
-				new_pid_value = SIGN(new_pid_value) * current_limit;
-				if (!d->braking && ((d->current_time - d->surge_timer) > surge_period)) { 
+				new_pid_value = SIGN(new_pid_value) * current_limit; //Apply current limit
+				if (!d->braking && ((d->current_time - d->surge_timer) > surge_period)) { //Apply surge
 					// Don't surge for braking or during an active surge period
-					// no longer used	d->surge = true; //Surge period is engaged
 					d->surge_timer = d->current_time; //Reset timer
 					d->presurge_duty = d->duty_cycle; //Set pre-surge duty
+					d->surge = true; //Begin the surge cycle of the surge period
 				}
 			} else {
 				// Over continuous current for more than 3 seconds? Just beep, don't actually limit currents
@@ -1869,25 +1876,20 @@ static void float_thd(void *arg) {
 					}
 				}
 			}
-			/* Old statements for timing surge duty
+				
+			//Continue to engage surge only for the surge cycle portion of our surge period
 			if (d->surge){	
 				if ((d->current_time - d->surge_timer) < surge_cycle){
-				//Engage surge only for the surge cycle portion of our period
-					new_duty_value = d->presurge_duty + SIGN(d->presurge_duty) * surge_margin; // Apply surge margin
-					d->surge = true;
-				} else if ((d->current_time - d->surge_timer) < surge_period){
-				//Disengage surge after the surge cycle 
-					// We will go back to current control for remaining surge period
 					d->surge = true;
 				} else {
-					d->surge = false; // Surge period time out
+					d->surge = false;
 				}
-			}*/
+			}					
 			
 			// Increment the current or duty cycle with new values as required
 			if (d->traction_control) {
 				d->pid_value = 0; // freewheel while traction loss is detected
-			} else if (((d->current_time - d->surge_timer) < surge_cycle) && 	//Within the surge cycle portion of the surge period
+			} else if (d->surge && 							//Within the surge cycle portion of the surge period
 			 (fabsf(d->proportional - SIGN(d->erpm)*surge_anglemin) > 0)){ 		//and pitch meets our minimum angle to ensure acceleration
 				d->duty_cycle = d->duty_cycle * (1-duty_increment) + (d->presurge_duty * (1 + surge_margin)) * duty_increment; 
 				// Increment duty during surge cycle based on presurge duty at start of cycle, surge margin, and ramp rate
@@ -1912,7 +1914,7 @@ static void float_thd(void *arg) {
 					set_current(d, d->pid_value + d->float_conf.startup_click_current);
 				}
 			} else if (!d->traction_control && 					//Not in traction control
-			 ((d->current_time - d->surge_timer) < surge_cycle) && 			//Within the surge cycle of the surge period
+			 d->surge && 								//Within the surge cycle of the surge period
 			 (fabsf(d->proportional - SIGN(d->erpm)*surge_anglemin) > 0)) { 	//Pitch meets our minimum angle to ensure acceleration
 													//Without this condition the board can overreact, 
 													//tilt back, and brake abruptly when surge cycle is over
