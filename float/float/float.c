@@ -1838,12 +1838,12 @@ static void float_thd(void *arg) {
 				current_limit = d->mc_current_max * (1 + 0.6 * fabsf(d->torqueresponse_interpolated / 10));
 			}
 			
-			float surge_margin = 0.1; //Increased duty
+			float surge_margin = 0.5; //Increased duty, in percent
 			float surge_period = 1; //Period between each surge, in seconds
 			float surge_cycle = 0.1; //How much of the period with be at surge duty, in seconds
 			//float surge_ramp = 0.10; //How long until reaching 90% maximum surge duty, in seconds. 0 < surge_ramp <= surge_cycle
 			float surge_anglemin = 1; // Minimum d->proportional required to ensure we are continuously at an acceleration angle
-			double duty_increment = 0.08 // 0.002716 * pow(surge_ramp, -1.009702); //Formula to calc increment based on time to 90% target value at 832hz
+			float duty_increment = 0.08 // 0.002716 * pow(surge_ramp, -1.009702); //Formula to calc increment based on time to 90% target value at 832hz
 			//no longe rused float new_duty_value = 0; 
 			
 			if (fabsf(new_pid_value) > current_limit) { //Check for current limit and surge
@@ -1889,7 +1889,7 @@ static void float_thd(void *arg) {
 				d->pid_value = 0; // freewheel while traction loss is detected
 			} else if (((d->current_time - d->surge_timer) < surge_cycle) && 	//Within the surge cycle portion of the surge period
 			 (fabsf(d->proportional - SIGN(d->erpm)*surge_anglemin) > 0)){ 		//and pitch meets our minimum angle to ensure acceleration
-				d->duty_cycle = d->duty_cycle * (1-duty_increment) + (d->presurge_duty + SIGN(d->presurge_duty) * surge_margin) * duty_increment; 
+				d->duty_cycle = d->duty_cycle * (1-duty_increment) + (d->presurge_duty * (1 + surge_margin)) * duty_increment; 
 				// Increment duty during surge cycle based on presurge duty at start of cycle, surge margin, and ramp rate
 			} else if (d->braking && (fabsf(d->pid_value - new_pid_value) > d->pid_brake_increment)) { // Brake Amp Rate Limiting
 				if (new_pid_value > d->pid_value) {
@@ -1918,6 +1918,7 @@ static void float_thd(void *arg) {
 													//tilt back, and brake abruptly when surge cycle is over
 				set_dutycycle(d, d->duty_cycle); 				//Set the duty to surge
 				d->debug3= d->duty_cycle;
+				d->debug1 = fabsf(d->proportional - SIGN(d->erpm)*surge_anglemin);
 			} else {
 				set_current(d, d->pid_value); // If we are in traction control, tilted back, or not surging, set current as normal.
 				if ((d->current_time - d->surge_timer) < surge_cycle) {
@@ -1925,7 +1926,7 @@ static void float_thd(void *arg) {
 					
 				}
 			}
-			d->debug1 = fabsf(d->proportional - SIGN(d->erpm)*surge_anglemin);
+			
 			break;
 
 		case (FAULT_ANGLE_PITCH):
