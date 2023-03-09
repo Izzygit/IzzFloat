@@ -208,7 +208,9 @@ typedef struct {
 	// Feature: Surge
 	float presurge_duty;
 	float surge_timer;
-	bool surge;
+	float debug1;
+	float debug2;
+	bool debug3;
 		
 	// Log values
 	float float_setpoint, float_atr, float_braketilt, float_torquetilt, float_turntilt, float_inputtilt;
@@ -1844,7 +1846,7 @@ static void float_thd(void *arg) {
 			float duty_increment = 0.002716 * pow(surge_ramp, -1.009702) //Formula to calc increment based on time to 90% target value at 832hz
 			//no longe rused float new_duty_value = 0; 
 			
-			if (fabsf(new_pid_value) > current_limit) { //Check for current limit and apply surge
+			if (fabsf(new_pid_value) > current_limit) { //Check for current limit and surge
 				new_pid_value = SIGN(new_pid_value) * current_limit;
 				if (!d->braking && ((d->current_time - d->surge_timer) > surge_period)) { 
 					// Don't surge for braking or during an active surge period
@@ -1904,10 +1906,11 @@ static void float_thd(void *arg) {
 			if (d->start_counter_clicks) {
 				// Generate alternate pulses to produce distinct "click" during start up
 				d->start_counter_clicks--;
-				if ((d->start_counter_clicks & 0x1) == 0)
+				if ((d->start_counter_clicks & 0x1) == 0) {
 					set_current(d, d->pid_value - d->float_conf.startup_click_current);
-				else
+				} else {
 					set_current(d, d->pid_value + d->float_conf.startup_click_current);
+				}
 			} else if (!d->traction_control && 					//Not in traction control
 			 ((d->current_time - d->surge_timer) < surge_cycle) && 			//Within the surge cycle of the surge period
 			 (fabsf(d->proportional - SIGN(d->erpm)*surge_anglemin) > 0)) { 	//Pitch meets our minimum angle to ensure acceleration
@@ -1915,9 +1918,13 @@ static void float_thd(void *arg) {
 													//tilt back, and brake abruptly when surge cycle is over
 				set_dutycycle(d, d->duty_cycle); 				//Set the duty to surge
 			} else {
-				set_current(d, d->pid_value); // If we are not surging, in traction control, or tilted back, set current as normal.
+				set_current(d, d->pid_value); // If we are in traction control, tilted back, or not surging, set current as normal.
+				if ((d->current_time - d->surge_timer) < surge_cycle) {
+					d->debug2= fabsf(d->proportional - SIGN(d->erpm)*surge_anglemin);
+					d->debug3= d->traction_control;
+				}
 			}
-
+			d->debug1 = (fabsf(d->proportional - SIGN(d->erpm)*surge_anglemin);
 			break;
 
 		case (FAULT_ANGLE_PITCH):
@@ -2143,9 +2150,12 @@ static void send_realtime_data(data *d){
 	buffer_append_float32_auto(send_buffer, d->surge_timer , &ind); //Added for surge debug
 	buffer_append_float32_auto(send_buffer, d->current_time, &ind); //Added for surge debug
 	buffer_append_float32_auto(send_buffer, d->presurge_duty, &ind); //Added for surge debug
-	buffer_append_float32_auto(send_buffer, d->applied_booster_current, &ind);
-	buffer_append_float32_auto(send_buffer, d->motor_current, &ind);
-	buffer_append_float32_auto(send_buffer, d->throttle_val, &ind);
+	buffer_append_float32_auto(send_buffer, d->debug1 , &ind); //Added for surge debug
+	buffer_append_float32_auto(send_buffer, d->debug2, &ind); //Added for surge debug
+	buffer_append_float32_auto(send_buffer, d->debug3, &ind); //Added for surge debug
+//Changed temporarily	buffer_append_float32_auto(send_buffer, d->applied_booster_current, &ind);
+//Changed temporarily	buffer_append_float32_auto(send_buffer, d->motor_current, &ind);
+//Changed temporarily	buffer_append_float32_auto(send_buffer, d->throttle_val, &ind);
 
 	if (ind > BUFSIZE) {
 		VESC_IF->printf("BUFSIZE too small...\n");
