@@ -848,9 +848,9 @@ static void calculate_setpoint_target(data *d) {
 		d->state = RUNNING_WHEELSLIP;
 		d->setpointAdjustmentType = TILTBACK_NONE;
 		d->wheelslip_timer = d->current_time;
-		if (d->is_upside_down) {
+		//if (d->is_upside_down) { //Commented out so that traction control is activated by wheel slip
 			d->traction_control = true;
-		}
+		//}
 	} else if (d->state == RUNNING_WHEELSLIP) {
 		if (fabsf(d->acceleration) < accel_limit) {
 			// acceleration is slowing down, traction control seems to have worked
@@ -1859,7 +1859,7 @@ static void float_thd(void *arg) {
 					// Don't surge for braking or during an active surge period
 					d->surge_timer = d->current_time; //Reset timer
 					d->presurge_duty = d->duty_cycle; //Set pre-surge duty
-					d->surge = true; //Begin the surge cycle of the surge period
+					d->surge = true; //Indicates we are in the surge cycle of the surge period
 				}
 			} else {
 				// Over continuous current for more than 3 seconds? Just beep, don't actually limit currents
@@ -1886,10 +1886,12 @@ static void float_thd(void *arg) {
 				}
 			}					
 			
-			// Increment the current or duty cycle with new values as required
-			if (d->traction_control) {
+			/*if (d->traction_control) {						//Commented out so we don't act on traction control
 				d->pid_value = 0; // freewheel while traction loss is detected
-			} else if (d->surge && 							//Within the surge cycle portion of the surge period
+			} else*/ 
+			
+			// Increment the current or duty cycle with new values as required
+			if (d->surge && 							//Within the surge cycle portion of the surge period
 			 (fabsf(d->proportional - SIGN(d->erpm)*surge_anglemin) > 0)){ 		//and pitch meets our minimum angle to ensure acceleration
 				d->duty_cycle = d->duty_cycle * (1-duty_increment) + (d->presurge_duty * (1 + surge_margin)) * duty_increment; 
 				// Increment duty during surge cycle based on presurge duty at start of cycle, surge margin, and ramp rate
@@ -1919,12 +1921,13 @@ static void float_thd(void *arg) {
 													//Without this condition the board can overreact, 
 													//tilt back, and brake abruptly when surge cycle is over
 				set_dutycycle(d, d->duty_cycle); 				//Set the duty to surge
-				d->debug1= d->duty_cycle;
-				d->debug3 = fabsf(d->proportional - SIGN(d->erpm)*surge_anglemin);
+				d->debug1= d->duty_cycle;					//Will report the final duty before exiting surge cycle
+				d->debug3 = fabsf(d->proportional - SIGN(d->erpm)*surge_anglemin); //Will report the final angle before exiting surge cycle
 			} else {
 				set_current(d, d->pid_value); // If we are in traction control, tilted back, or not surging, set current as normal.
 				if ((d->current_time - d->surge_timer) < surge_cycle) {
-					d->debug2= fabsf(d->proportional - SIGN(d->erpm)*surge_anglemin);
+					d->debug2= fabsf(d->proportional - SIGN(d->erpm)*surge_anglemin); 	//Will report the final angle 
+														//if fault causes end to surge cycle
 				}
 			}
 			
