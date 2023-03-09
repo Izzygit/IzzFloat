@@ -1842,8 +1842,8 @@ static void float_thd(void *arg) {
 			float surge_period = 1; //Period between each surge, in seconds
 			float surge_cycle = 0.15; //How much of the period with be at surge duty, in seconds
 			float surge_ramp = 0.10; //How long until reaching 90% maximum surge duty, in seconds. 0 < surge_ramp <= surge_cycle
-			float surge_anglemin = 0.2; // Minimum d->proportional required to ensure we are continuously at an acceleration angle
-			double duty_increment = 0.002716 * pow(surge_ramp, -1.009702); //Formula to calc increment based on time to 90% target value at 832hz
+			float surge_anglemin = 0.5; // Minimum d->proportional required to ensure we are continuously at an acceleration angle
+			double duty_increment = .05 // 0.002716 * pow(surge_ramp, -1.009702); //Formula to calc increment based on time to 90% target value at 832hz
 			//no longe rused float new_duty_value = 0; 
 			
 			if (fabsf(new_pid_value) > current_limit) { //Check for current limit and surge
@@ -1917,11 +1917,12 @@ static void float_thd(void *arg) {
 													//Without this condition the board can overreact, 
 													//tilt back, and brake abruptly when surge cycle is over
 				set_dutycycle(d, d->duty_cycle); 				//Set the duty to surge
+				d->debug3= d->duty_cycle;
 			} else {
 				set_current(d, d->pid_value); // If we are in traction control, tilted back, or not surging, set current as normal.
 				if ((d->current_time - d->surge_timer) < surge_cycle) {
 					d->debug2= fabsf(d->proportional - SIGN(d->erpm)*surge_anglemin);
-					d->debug3= d->traction_control;
+					
 				}
 			}
 			d->debug1 = fabsf(d->proportional - SIGN(d->erpm)*surge_anglemin);
