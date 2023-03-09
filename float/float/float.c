@@ -1838,12 +1838,12 @@ static void float_thd(void *arg) {
 				current_limit = d->mc_current_max * (1 + 0.6 * fabsf(d->torqueresponse_interpolated / 10));
 			}
 			
-			float surge_margin = 0.3; //Increased duty, in percent
+			float surge_margin = 0.5; //Increased duty, in percent
 			float surge_period = 1; //Period between each surge, in seconds
 			float surge_cycle = 0.1; //How much of the period with be at surge duty, in seconds
-			//float surge_ramp = 0.10; //How long until reaching 90% maximum surge duty, in seconds. 0 < surge_ramp <= surge_cycle
+			float surge_ramp = 0.03; //How long until reaching 90% maximum surge duty, in seconds. 0 < surge_ramp <= surge_cycle
 			float surge_anglemin = 1; // Minimum d->proportional required to ensure we are continuously at an acceleration angle
-			float duty_increment = 0.08; // 0.002716 * pow(surge_ramp, -1.009702); //Formula to calc increment based on time to 90% target value at 832hz
+			float duty_increment = (float)0.002716 * pow(surge_ramp, -1.009702); //Formula to calc increment based on time to 90% target value at 832hz
 			//no longer used float new_duty_value = 0; 
 			
 			if (fabsf(new_pid_value) > current_limit) { //Check for current limit and surge
