@@ -1838,13 +1838,13 @@ static void float_thd(void *arg) {
 				current_limit = d->mc_current_max * (1 + 0.6 * fabsf(d->torqueresponse_interpolated / 10));
 			}
 			
-			float surge_margin = 0.5; //Increased duty, in percent
+			float surge_margin = 0.25; //Increased duty, in percent
 			float surge_period = 1; //Period between each surge, in seconds
 			float surge_cycle = 0.1; //How much of the period with be at surge duty, in seconds
 			//float surge_ramp = 0.10; //How long until reaching 90% maximum surge duty, in seconds. 0 < surge_ramp <= surge_cycle
 			float surge_anglemin = 1; // Minimum d->proportional required to ensure we are continuously at an acceleration angle
 			float duty_increment = 0.08; // 0.002716 * pow(surge_ramp, -1.009702); //Formula to calc increment based on time to 90% target value at 832hz
-			//no longe rused float new_duty_value = 0; 
+			//no longer used float new_duty_value = 0; 
 			
 			if (fabsf(new_pid_value) > current_limit) { //Check for current limit and surge
 				new_pid_value = SIGN(new_pid_value) * current_limit;
@@ -1911,14 +1911,14 @@ static void float_thd(void *arg) {
 				} else {
 					set_current(d, d->pid_value + d->float_conf.startup_click_current);
 				}
-			} else if (!d->traction_control && 					//Not in traction control
+			} else if (//!d->traction_control && 					//Not in traction control
 			 ((d->current_time - d->surge_timer) < surge_cycle) && 			//Within the surge cycle of the surge period
 			 (fabsf(d->proportional - SIGN(d->erpm)*surge_anglemin) > 0)) { 	//Pitch meets our minimum angle to ensure acceleration
 													//Without this condition the board can overreact, 
 													//tilt back, and brake abruptly when surge cycle is over
 				set_dutycycle(d, d->duty_cycle); 				//Set the duty to surge
-				d->debug3= d->duty_cycle;
-				d->debug1 = fabsf(d->proportional - SIGN(d->erpm)*surge_anglemin);
+				d->debug1= d->duty_cycle;
+				d->debug3 = fabsf(d->proportional - SIGN(d->erpm)*surge_anglemin);
 			} else {
 				set_current(d, d->pid_value); // If we are in traction control, tilted back, or not surging, set current as normal.
 				if ((d->current_time - d->surge_timer) < surge_cycle) {
