@@ -212,6 +212,10 @@ typedef struct {
 	float debug1;
 	float debug2;
 	float debug3;
+	float debug4;
+	float debug5;
+	float debug6;
+	float debug7;
 		
 	// Log values
 	float float_setpoint, float_atr, float_braketilt, float_torquetilt, float_turntilt, float_inputtilt;
@@ -815,7 +819,7 @@ static void calculate_setpoint_target(data *d) {
 	}
 	
 	//Adjust acceleration limit for wheel slip condition if we are surging
-	float accel_limit = 15; 
+	double accel_limit = 15; 
 	if (d->surge){
 		accel_limit = 30;
 	}
@@ -1853,9 +1857,15 @@ static void float_thd(void *arg) {
 			//stolen interface- Constant Tiltback ERPM //float surge_ramp = 0.033; //How long until reaching 90% maximum surge duty, in seconds. 0 < surge_ramp <= surge_cycle
 			float surge_ramp = d->float_conf.tiltback_constant_erpm/1000; //UI in ms
 			float surge_anglemin = 1; // Minimum d->proportional required to ensure we are continuously at an acceleration angle
-			double duty_increment = 0.003085122* pow(surge_ramp, -0.9536787234); //Formula to calc increment based on time to 90% target value at 832hz
+			float duty_increment = (float)(0.003085122* pow(surge_ramp, -0.9536787234)); //Formula to calc increment based on time to 90% target value at 832hz
 			//no longer used float new_duty_value = 0; 
 			
+			//Debug temp
+			d-debug4 = surge_margin;
+			d-debug5 = surge_cycle;
+			d-debug6 = surge_ramp;
+			d-debug7 = duty_increment;
+				
 			if (fabsf(new_pid_value) > current_limit) { //Check for current limit and surge
 				new_pid_value = SIGN(new_pid_value) * current_limit; //Apply current limit
 				if (!d->braking && ((d->current_time - d->surge_timer) > surge_period)) { //Apply surge
@@ -2150,10 +2160,10 @@ static void send_realtime_data(data *d){
 	//Changed temporarily	buffer_append_float32_auto(send_buffer, d->float_torquetilt, &ind);
 	//Changed temporarily	buffer_append_float32_auto(send_buffer, d->float_turntilt, &ind);
 	//Changed temporarily	buffer_append_float32_auto(send_buffer, d->float_inputtilt, &ind);
-	buffer_append_float32_auto(send_buffer, surge_margin, &ind);//Added for surge debug
-	buffer_append_float32_auto(send_buffer, surge_cycle, &ind);//Added for surge debug
-	buffer_append_float32_auto(send_buffer, surge_ramp, &ind);//Added for surge debug
-	buffer_append_float32_auto(send_buffer, duty_increment, &ind);//Added for surge debug
+	buffer_append_float32_auto(send_buffer, d-debug4, &ind);//Added for surge debug
+	buffer_append_float32_auto(send_buffer, d-debug5, &ind);//Added for surge debug
+	buffer_append_float32_auto(send_buffer, d-debug6, &ind);//Added for surge debug
+	buffer_append_float32_auto(send_buffer, d-debug7, &ind);//Added for surge debug
 	
 	// DEBUG
 //Changed temporarily	buffer_append_float32_auto(send_buffer, d->true_pitch_angle, &ind);
