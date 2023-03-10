@@ -1861,10 +1861,10 @@ static void float_thd(void *arg) {
 			//no longer used float new_duty_value = 0; 
 			
 			//Debug temp
-			d-debug4 = surge_margin;
-			d-debug5 = surge_cycle;
-			d-debug6 = surge_ramp;
-			d-debug7 = duty_increment;
+			d->debug4 = surge_margin;
+			d->debug5 = surge_cycle;
+			d->debug6 = surge_ramp;
+			d->debug7 = duty_increment;
 				
 			if (fabsf(new_pid_value) > current_limit) { //Check for current limit and surge
 				new_pid_value = SIGN(new_pid_value) * current_limit; //Apply current limit
@@ -2160,10 +2160,10 @@ static void send_realtime_data(data *d){
 	//Changed temporarily	buffer_append_float32_auto(send_buffer, d->float_torquetilt, &ind);
 	//Changed temporarily	buffer_append_float32_auto(send_buffer, d->float_turntilt, &ind);
 	//Changed temporarily	buffer_append_float32_auto(send_buffer, d->float_inputtilt, &ind);
-	buffer_append_float32_auto(send_buffer, d-debug4, &ind);//Added for surge debug
-	buffer_append_float32_auto(send_buffer, d-debug5, &ind);//Added for surge debug
-	buffer_append_float32_auto(send_buffer, d-debug6, &ind);//Added for surge debug
-	buffer_append_float32_auto(send_buffer, d-debug7, &ind);//Added for surge debug
+	buffer_append_float32_auto(send_buffer, d->debug4, &ind);//Added for surge debug
+	buffer_append_float32_auto(send_buffer, d->debug5, &ind);//Added for surge debug
+	buffer_append_float32_auto(send_buffer, d->debug6, &ind);//Added for surge debug
+	buffer_append_float32_auto(send_buffer, d->debug7, &ind);//Added for surge debug
 	
 	// DEBUG
 //Changed temporarily	buffer_append_float32_auto(send_buffer, d->true_pitch_angle, &ind);
