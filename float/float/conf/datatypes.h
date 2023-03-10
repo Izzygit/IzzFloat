@@ -119,6 +119,9 @@ typedef struct {
 	int turntilt_yaw_aggregate;
 	float dark_pitch_offset;
 	bool is_buzzer_enabled;
+	float surge_margin;
+	float surge_ramp;
+	float surge_time;
 } float_config;
 
 // DATATYPES_H_
