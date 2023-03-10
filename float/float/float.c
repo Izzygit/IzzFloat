@@ -1853,7 +1853,7 @@ static void float_thd(void *arg) {
 			float surge_margin = d->float_conf.tiltback_variable;
 			float surge_period = 1; //Period between each surge, in seconds. Prevents runaway and instability. 
 			//stolen interface- Turn Tiltback ERPM Threshold //float surge_cycle = 0.1; //How much of the period with be at surge duty, in seconds
-			float surge_cycle = d->float_conf.turntilt_start_erpm/1000; //UI in ms
+			float surge_cycle = d->float_conf.torquetilt_start_current/100; //UI in s*100
 			//stolen interface- Nose Angling Speed //float surge_ramp = 0.033; //How long until reaching 90% maximum surge duty, in seconds. 0 < surge_ramp <= surge_cycle
 			float surge_ramp = d->float_conf.noseangling_speed/1000; //UI in ms
 			float surge_anglemin = 1; // Minimum d->proportional required to ensure we are continuously at an acceleration angle
