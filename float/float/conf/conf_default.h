@@ -443,6 +443,21 @@
 #define APPCONF_FLOAT_VERSION 0.9
 #endif
 
+// Surge Margin
+#ifndef APPCONF_SURGE_MARGIN
+#define APPCONF_SURGE_MARGIN 0.5
+#endif
+
+// Surge Ramp
+#ifndef APPCONF_SURGE_RAMP
+#define APPCONF_SURGE_RAMP 35
+#endif
+
+// Surge Time
+#ifndef APPCONF_SURGE_TIME
+#define APPCONF_SURGE_TIME 100
+#endif
+
 // CONF_DEFAULT_H_
 #endif
 
