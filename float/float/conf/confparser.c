@@ -98,7 +98,9 @@ int32_t confparser_serialize_float_config(uint8_t *buffer, const float_config *c
 	buffer[ind++] = conf->is_buzzer_enabled;
 	buffer[ind++] = conf->float_disable;
 	buffer_append_float16(buffer, conf->float_version, 1000, &ind);
-
+	buffer_append_float16(buffer, conf->surge_margin, 100, &ind);
+	buffer_append_float16(buffer, conf->surge_ramp, 1000, &ind);
+	buffer_append_float16(buffer, conf->surge_time, 1000, &ind);
 	return ind;
 }
 
@@ -198,7 +200,9 @@ bool confparser_deserialize_float_config(const uint8_t *buffer, float_config *co
 	conf->is_buzzer_enabled = buffer[ind++];
 	conf->float_disable = buffer[ind++];
 	conf->float_version = buffer_get_float16(buffer, 1000, &ind);
-
+	conf->surge_margin = buffer_get_float16(buffer, 100, &ind);
+	conf->surge_ramp = buffer_get_float16(buffer, 1000, &ind);
+	conf->surge_time = buffer_get_float16(buffer, 1000, &ind);
 	return true;
 }
 
@@ -291,5 +295,8 @@ void confparser_set_defaults_float_config(float_config *conf) {
 	conf->is_buzzer_enabled = APPCONF_FLOAT_IS_BUZZER_ENABLED;
 	conf->float_disable = APPCONF_FLOAT_DISABLE;
 	conf->float_version = APPCONF_FLOAT_VERSION;
+	conf->surge_margin = APPCONF_SURGE_MARGIN;
+	conf->surge_ramp = APPCONF_SURGE_RAMP;
+	conf->surge_time = APPCONF_SURGE_TIME;
 }
 
