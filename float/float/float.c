@@ -1846,7 +1846,7 @@ static void float_thd(void *arg) {
 			}
 			
 			float surge_margin = 0.5; //Increased duty, in percent
-			float surge_period = 1; //Period between each surge, in seconds
+			float surge_period = 1; //Period between each surge, in seconds. Prevents runaway and instability. 
 			float surge_cycle = 0.1; //How much of the period with be at surge duty, in seconds
 			float surge_ramp = 0.033; //How long until reaching 90% maximum surge duty, in seconds. 0 < surge_ramp <= surge_cycle
 			float surge_anglemin = 1; // Minimum d->proportional required to ensure we are continuously at an acceleration angle
@@ -1879,9 +1879,7 @@ static void float_thd(void *arg) {
 				
 			//Continue to engage surge only for the surge cycle portion of our surge period
 			if (d->surge){	
-				if ((d->current_time - d->surge_timer) < surge_cycle){
-					d->surge = true;
-				} else {
+				if ((d->current_time - d->surge_timer) > surge_cycle){
 					d->surge = false;
 				}
 			}					
@@ -1894,7 +1892,7 @@ static void float_thd(void *arg) {
 			if (d->surge && 							//Within the surge cycle portion of the surge period
 			 (fabsf(d->proportional - SIGN(d->erpm)*surge_anglemin) > 0)){ 		//and pitch meets our minimum angle to ensure acceleration
 				d->duty_cycle = d->duty_cycle * (1-duty_increment) + (d->presurge_duty * (1 + surge_margin)) * duty_increment; 
-				// Increment duty during surge cycle based on presurge duty at start of cycle, surge margin, and ramp rate
+				// Increment duty during surge cycle based on pre-surge duty at start of cycle, surge margin, and ramp rate
 			} else if (d->braking && (fabsf(d->pid_value - new_pid_value) > d->pid_brake_increment)) { // Brake Amp Rate Limiting
 				if (new_pid_value > d->pid_value) {
 					d->pid_value += d->pid_brake_increment;
@@ -1925,6 +1923,7 @@ static void float_thd(void *arg) {
 				d->debug3 = fabsf(d->proportional - SIGN(d->erpm)*surge_anglemin); //Will report the final angle before exiting surge cycle
 			} else {
 				set_current(d, d->pid_value); // If we are in traction control, tilted back, or not surging, set current as normal.
+				d->surge = false;		// Don't re-engage surge if we have left surge cycle until new surge period
 				if ((d->current_time - d->surge_timer) < surge_cycle) {
 					d->debug2= fabsf(d->proportional - SIGN(d->erpm)*surge_anglemin); 	//Will report the final angle 
 														//if fault causes end to surge cycle
