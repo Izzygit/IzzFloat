@@ -1851,13 +1851,14 @@ static void float_thd(void *arg) {
 			
 			//stolen interface- Variable Tiltback rate //float surge_margin = 0.5; //Increased duty, in percent
 			float surge_margin = d->float_conf.tiltback_variable;
-			float surge_period = 1; //Period between each surge, in seconds. Prevents runaway and instability. 
-			//stolen interface- Turn Tiltback ERPM Threshold //float surge_cycle = 0.1; //How much of the period with be at surge duty, in seconds
+			float surge_period = .75; //Period between each surge, in seconds. Prevents runaway and instability. 
+			//stolen interface- Turn Tiltback ERPM Threshold //float surge_cycle = 0.1; //How much of the period with be at surge duty, in seconds. 0 to disable
 			float surge_cycle = d->float_conf.torquetilt_start_current/100; //UI in s*100
 			//stolen interface- Nose Angling Speed //float surge_ramp = 0.033; //How long until reaching 90% maximum surge duty, in seconds. 0 < surge_ramp <= surge_cycle
 			float surge_ramp = d->float_conf.noseangling_speed/1000; //UI in ms
 			float surge_anglemin = 1; // Minimum d->proportional required to ensure we are continuously at an acceleration angle
-			float duty_increment = (float)(0.003085122* pow(surge_ramp, -0.9536787234)); //Formula to calc increment based on time to 90% target value at 832hz
+			double surge_steps = surge_ramp*d->float_conf.hertz
+			float duty_increment = (float)(1.9531* pow(surge_steps, -0.966)); //Formula to calc increment based on time to 90% target value, +/-5% error
 			//no longer used float new_duty_value = 0; 
 			
 			//Debug temp
@@ -1898,7 +1899,7 @@ static void float_thd(void *arg) {
 			}					
 			
 			/*if (d->traction_control) {						//Commented out so we don't act on traction control
-				d->pid_value = 0; // freewheel while traction loss is detected
+				d->pid_value = 0; // freewheel while traction loss is detected 	//Surfdado said it is risky to use in the current state
 			} else*/ 
 			
 			// Increment the current or duty cycle with new values as required
@@ -1915,7 +1916,6 @@ static void float_thd(void *arg) {
 			} else { // Increment the current like normal
 				d->pid_value = d->pid_value * 0.8 + new_pid_value * 0.2; 
 			}
-
 
 			// Output to motor
 			if (d->start_counter_clicks) {
