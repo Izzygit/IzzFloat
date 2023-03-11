@@ -249,7 +249,7 @@ Item {
 
                 rt_data.text =
                     "Current (Requested) : " + pid_value.toFixed(2) + "A\n" +
-                    "Current (Motor)     : " + motor_current.toFixed(2) + "A\n" +
+                    "Fault last angle    : " + motor_current.toFixed(2) + "A\n" +
                     "Pitch               : " + pitch.toFixed(2) + "°\n" +
                     "Roll                : " + roll.toFixed(2) + "°\n" +
                     "ADC1 / ADC2         : " + adc1.toFixed(2) + "V / " + adc2.toFixed(2) + "V\n"
@@ -257,17 +257,17 @@ Item {
                 setpoints.text =
                     "Setpoint            : " + float_setpoint.toFixed(2) + "°\n" +
                     "ATR Setpoint        : " + float_atr.toFixed(2) + "°\n" +
-                    "BrakeTilt Setpoint  : " + float_braketilt.toFixed(2) + "°\n" +
-                    "TorqueTilt Setpoint : " + float_torquetilt.toFixed(2) + "°\n" +
-                    "TurnTilt Setpoint   : " + float_turntilt.toFixed(2) + "°\n" +
-                    "RemoteTilt Setpoint  : " + float_inputtilt.toFixed(2) + "°\n"
+                    "Surge Margin        : " + (float_braketilt * 100).toFixed(2) + "%\n" +
+                    "Surge Cycle         : " + float_torquetilt.toFixed(2) + "s\n" +
+                    "Surge Ramp          : " + float_turntilt.toFixed(2) + "s\n" +
+                    "Increment           : " + float_inputtilt.toFixed(2) + "\n"
 
                 debug.text =
-                    "True Pitch          : " + true_pitch.toFixed(2) + "°\n" +
-                    "Torque              : " + filtered_current.toFixed(2) + "A\n" +
-                    "Acc. Diff.          : " + float_acc_diff.toFixed(2) + "\n" +
-                    "Booster Current     : " + applied_booster_current.toFixed(2) + "A\n" +
-                    "Remote Input        : " + (throttle_val * 100).toFixed(0) + "%\n"
+                    "Last Surge Time     : " + true_pitch.toFixed(2) + "s\n" +
+                    "Current Time        : " + filtered_current.toFixed(2) + "s\n" +
+                    "Pre-surge Duty      : " + float_acc_diff.toFixed(2) + "\n" +
+                    "Last Surge Duty     : " + applied_booster_current.toFixed(2) + "\n" +
+                    "Final Angle         : " + (throttle_val * 100).toFixed(2) + "\n"
                 }
             }
         }
