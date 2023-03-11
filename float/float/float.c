@@ -209,6 +209,7 @@ typedef struct {
 	float presurge_duty;
 	float surge_timer;
 	bool surge;
+	float differential;
 	float debug1;
 	float debug2;
 	float debug3;
@@ -819,9 +820,9 @@ static void calculate_setpoint_target(data *d) {
 	}
 	
 	//Adjust acceleration limit for wheel slip condition if we are surging
-	double accel_limit = 15; 
+	double accel_limit = 30 
 	if (d->surge){
-		accel_limit = 30;
+		accel_limit = 60
 	}
 	
 	if (d->setpointAdjustmentType == CENTERING && d->setpoint_target_interpolated != d->setpoint_target) {
@@ -1771,7 +1772,7 @@ static void float_thd(void *arg) {
 			}
 
 			new_pid_value = (d->float_conf.kp * d->proportional) + (d->float_conf.ki * d->integral);
-
+			d->differential = d->proportional - d->last_proportional;
 			d->last_proportional = d->proportional;
 
 			// Start Rate PID and Booster portion a few cycles later, after the start clicks have been emitted
@@ -1859,13 +1860,16 @@ static void float_thd(void *arg) {
 			float surge_anglemin = 0.7; // Minimum d->proportional required to ensure we are continuously at an acceleration angle
 			double surge_steps = surge_ramp*d->float_conf.hertz;
 			float duty_increment = (float)(1.9531* pow(surge_steps, -0.966)); //Formula to calc increment based on time to 90% target value, +/-5% error
+			float surge_maxanglespeed = 100; // Max speed the nose can travel back to center
+			float surge_maxdiff = surge_maxanglespeed / d->float_conf.hertz;
+			
 			//no longer used float new_duty_value = 0; 
 			
 			//Debug temp
 			d->debug4 = surge_margin;
 			d->debug5 = surge_cycle;
 			d->debug6 = surge_ramp;
-			d->debug7 = duty_increment;
+			
 				
 			if (fabsf(new_pid_value) > current_limit) { //Check for current limit and surge
 				new_pid_value = SIGN(new_pid_value) * current_limit; //Apply current limit
@@ -1893,7 +1897,10 @@ static void float_thd(void *arg) {
 				
 			//Continue to engage surge only for the surge cycle portion of our surge period
 			if (d->surge){	
-				if ((d->current_time - d->surge_timer) > surge_cycle){
+				if (((d->current_time - d->surge_timer) > surge_cycle) ||		//Outside the surge cycle portion of the surge period
+				 (fabsf(d->proportional) < surge_anglemin) ||				//The pitch is less than our minimum angle to ensure acceleration
+				 d->traction_control ||							//In traction control
+				 (d->differential < (sign(d->erpm)* surge_maxdiff))){			//Travelling too fast back to center	
 					d->surge = false;
 				}
 			}					
@@ -1903,8 +1910,7 @@ static void float_thd(void *arg) {
 			} else*/ 
 			
 			// Increment the current or duty cycle with new values as required
-			if (d->surge && 							//Within the surge cycle portion of the surge period
-			 (fabsf(d->proportional - SIGN(d->erpm)*surge_anglemin) > 0)){ 		//and pitch meets our minimum angle to ensure acceleration
+			if (d->surge){ 		
 				d->duty_cycle = d->duty_cycle * (1-duty_increment) + (d->presurge_duty * (1 + surge_margin)) * duty_increment; 
 				// Increment duty during surge cycle based on pre-surge duty at start of cycle, surge margin, and ramp rate
 			} else if (d->braking && (fabsf(d->pid_value - new_pid_value) > d->pid_brake_increment)) { // Brake Amp Rate Limiting
@@ -1926,11 +1932,7 @@ static void float_thd(void *arg) {
 				} else {
 					set_current(d, d->pid_value + d->float_conf.startup_click_current);
 				}
-			} else if (!d->traction_control && 					//Not in traction control
-			 d->surge && 								//Within the surge cycle of the surge period
-			 (fabsf(d->proportional - SIGN(d->erpm)*surge_anglemin) > 0)) { 	//Pitch meets our minimum angle to ensure acceleration
-													//Without this condition the board can overreact, 
-													//tilt back, and brake abruptly when surge cycle is over
+			} else if (d->surge) { 	
 				set_dutycycle(d, d->duty_cycle); 				//Set the duty to surge
 				d->debug1= d->duty_cycle;					//Will report the final duty before exiting surge cycle
 				d->debug3 = fabsf(d->proportional - SIGN(d->erpm)*surge_anglemin); //Will report the final angle before exiting surge cycle
@@ -1940,6 +1942,7 @@ static void float_thd(void *arg) {
 				if ((d->current_time - d->surge_timer) < surge_cycle) {
 					d->debug2= fabsf(d->proportional - SIGN(d->erpm)*surge_anglemin); 	//Will report the final angle 
 														//if fault causes end to surge cycle
+					d->debug7 = d->differential;
 				}
 			}
 			
