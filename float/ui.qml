@@ -249,7 +249,7 @@ Item {
 
                 rt_data.text =
                     "Current (Requested) : " + pid_value.toFixed(2) + "A\n" +
-                    "Fault last angle    : " + motor_current.toFixed(2) + "A\n" +
+                    "Fault last angle    : " + motor_current.toFixed(2) + "°\n" +
                     "Pitch               : " + pitch.toFixed(2) + "°\n" +
                     "Roll                : " + roll.toFixed(2) + "°\n" +
                     "ADC1 / ADC2         : " + adc1.toFixed(2) + "V / " + adc2.toFixed(2) + "V\n"
@@ -258,16 +258,16 @@ Item {
                     "Setpoint            : " + float_setpoint.toFixed(2) + "°\n" +
                     "ATR Setpoint        : " + float_atr.toFixed(2) + "°\n" +
                     "Surge Margin        : " + (float_braketilt * 100).toFixed(2) + "%\n" +
-                    "Surge Cycle         : " + float_torquetilt.toFixed(2) + "s\n" +
-                    "Surge Ramp          : " + float_turntilt.toFixed(2) + "s\n" +
-                    "Increment           : " + float_inputtilt.toFixed(2) + "\n"
+                    "Surge Cycle         : " + float_torquetilt.toFixed(3) + "s\n" +
+                    "Surge Ramp          : " + float_turntilt.toFixed(4) + "s\n" +
+                    "Increment           : " + float_inputtilt.toFixed(4) + "\n"
 
                 debug.text =
-                    "Last Surge Time     : " + true_pitch.toFixed(2) + "s\n" +
-                    "Current Time        : " + filtered_current.toFixed(2) + "s\n" +
-                    "Pre-surge Duty      : " + float_acc_diff.toFixed(2) + "\n" +
-                    "Last Surge Duty     : " + applied_booster_current.toFixed(2) + "\n" +
-                    "Final Angle         : " + (throttle_val * 100).toFixed(2) + "\n"
+                    "Last Surge Time     : " + true_pitch.toFixed(0) + "s\n" +
+                    "Current Time        : " + filtered_current.toFixed(0) + "s\n" +
+                    "Pre-surge Duty      : " + float_acc_diff.toFixed(3) + "\n" +
+                    "Last Surge Duty     : " + applied_booster_current.toFixed(3) + "\n" +
+                    "Pitch Diff          : " + (throttle_val * 100).toFixed(2) + "°\n"
                 }
             }
         }
