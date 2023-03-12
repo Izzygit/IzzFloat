@@ -1898,9 +1898,9 @@ static void float_thd(void *arg) {
 			//Continue to engage surge only for the surge cycle portion of our surge period
 			if (d->surge){	
 				if (((d->current_time - d->surge_timer) > surge_cycle) ||		//Outside the surge cycle portion of the surge period
-				 (fabsf(d->proportional) < surge_anglemin) ||				//The pitch is less than our minimum angle to ensure acceleration
+				 (SIGN(d->erpm) * d->proportional - surge_anglemin) > 0) ||		//The pitch is less than our minimum angle to ensure acceleration
 				 d->traction_control ||							//In traction control
-				 (d->differential < (sign(d->erpm)* surge_maxdiff))){			//Travelling too fast back to center	
+				 ((surge_maxdiff + (SIGN(d->erpm) * d->differential)) > 0)){		//Travelling too fast back to center	
 					d->surge = false;
 				}
 			}					
@@ -1935,14 +1935,21 @@ static void float_thd(void *arg) {
 			} else if (d->surge) { 	
 				set_dutycycle(d, d->duty_cycle); 				//Set the duty to surge
 				d->debug1= d->duty_cycle;					//Will report the final duty before exiting surge cycle
-				d->debug3 = fabsf(d->proportional - SIGN(d->erpm)*surge_anglemin); //Will report the final angle before exiting surge cycle
 			} else {
 				set_current(d, d->pid_value); // If we are in traction control, tilted back, or not surging, set current as normal.
 				d->surge = false;		// Don't re-engage surge if we have left surge cycle until new surge period
+				//fault debug
 				if ((d->current_time - d->surge_timer) < surge_cycle) {
-					d->debug2= fabsf(d->proportional - SIGN(d->erpm)*surge_anglemin); 	//Will report the final angle 
-														//if fault causes end to surge cycle
-					d->debug7 = d->differential;
+					if ((SIGN(d->erpm) * d->proportional - surge_anglemin) > 0){
+						d->debug2= d->proportional //The pitch is less than our minimum angle to ensure acceleration
+					}
+					if d->traction_control {	//In traction control
+						d->debug3 = 1;
+					}
+					if  ((surge_maxdiff + (SIGN(d->erpm) * d->differential)) > 0){	//Travelling too fast back to center	
+						d->debug7 = d->differential;
+					}
+					
 				}
 			}
 			
