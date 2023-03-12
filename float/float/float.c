@@ -1860,7 +1860,7 @@ static void float_thd(void *arg) {
 			float surge_anglemin = d->float_conf.tiltback_variable;
 			double surge_steps = surge_ramp*d->float_conf.hertz;
 			float duty_increment = (float)(1.9531* pow(surge_steps, -0.966)); //Formula to calc increment based on time to 90% target value, +/-5% error
-			float surge_maxanglespeed = 500; // Max speed the nose can travel back to center
+			float surge_maxanglespeed = 400; // Max speed the nose can travel back to center
 			float surge_maxdiff = surge_maxanglespeed / d->float_conf.hertz;
 			
 			//no longer used float new_duty_value = 0; 
