@@ -1870,20 +1870,19 @@ static void float_thd(void *arg) {
 		
 			//Start Surge
 			float surge_period = .75; //Period between each surge, in seconds. Prevents runaway and instability. 
-			float surge_cycle = d->float_conf.torquetilt_start_current/100; //UI in s*100
+			float surge_cycle = .25; //UI in s*100
 			float surge_minangle = d->float_conf.tiltback_variable;
-			float surge_maxanglespeed = 250; // Max speed the nose can travel back to center
+			float surge_maxanglespeed = d->float_conf.torquetilt_start_current*10; // Max speed the nose can travel back to center
 			float surge_maxdiff = surge_maxanglespeed / d->float_conf.hertz;
-			float current_margin = d->float_conf.noseangling_speed/10; //surge with less effort
+			float current_margin = /10; //surge with less effort
 			float surge_maxangle = 18; //maximum nose down angle
-			float surge_maxscale = 5; // increase scale of the differential safety father from setpoint 
+			float surge_maxscale = d->float_conf.noseangling_speed; // increase scale of the differential safety father from setpoint 
 			float surge_anglescale;
 			
 			//Debug temp
 			d->debug4 = surge_minangle;
-			d->debug5 = surge_cycle;
-			d->debug6 = surge_anglescale;
-				
+			d->debug5 = surge_maxanglespeed;
+							
 			if ((fabsf(new_pid_value) > current_margin * current_limit) && 	// Current request is greater than current limit * margin
 			    (!d->braking) && 						//Not braking
 			    ((d->current_time - d->surge_timer) > surge_period)) { 	//Not during an active surge period
@@ -1893,6 +1892,7 @@ static void float_thd(void *arg) {
 				d->debug2=0;
 				d->debug3=0;
 				d->debug7=0;
+				d->debug6=0;
 			}
 			surge_anglescale = (surge_maxscale-1)/(surge_maxangle-surge_minangle)*(fabsf(d->proportional))+(surge_maxscale-1)/(surge_maxangle-surge_minangle)*(-1*surge_minangle)+1;
 			//Continue to engage surge only for the surge cycle portion of our surge period
@@ -1947,6 +1947,7 @@ static void float_thd(void *arg) {
 					}
 					if  (surge_maxdiff * surge_anglescale + (SIGN(d->erpm) * d->differential ) < 0){	//Travelling too fast back to center	
 						d->debug7 = d->differential;
+						d->debug6 = surge_anglescale;
 					}
 				}
 			}
