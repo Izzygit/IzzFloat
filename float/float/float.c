@@ -1938,7 +1938,8 @@ static void float_thd(void *arg) {
 				set_current(d, d->pid_value); // If we are in traction control, tilted back, or not surging, set current as normal.
 				d->surge = false;		// Don't re-engage surge if we have left surge cycle until new surge period
 				//fault debug
-				if ((d->current_time - d->surge_timer) < surge_cycle) {
+				if (((d->current_time - d->surge_timer) < surge_cycle) &&
+				    (fabsf(d->debug2 + d->debug3 + d->debug7)==0)){
 					if ((SIGN(d->erpm) * d->proportional - surge_minangle) < 0){
 						d->debug2= d->proportional; //The pitch is less than our minimum angle to ensure acceleration
 					}
