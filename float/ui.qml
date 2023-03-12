@@ -257,9 +257,9 @@ Item {
                 setpoints.text =
                     "Setpoint            : " + float_setpoint.toFixed(2) + "°\n" +
                     "ATR Setpoint        : " + float_atr.toFixed(2) + "°\n" +
-                    "Surge Margin        : " + (float_braketilt * 100).toFixed(2) + "%\n" +
+                    "Surge Angle Min     : " + (float_braketilt).toFixed(2) + "°\n" +
                     "Surge Cycle         : " + float_torquetilt.toFixed(3) + "s\n" +
-                    "Surge Ramp          : " + float_turntilt.toFixed(4) + "s\n" +
+                    "Duty Incr.          : " + float_turntilt.toFixed(4) + "\n" +
                     "Fault Diff          : " + float_inputtilt.toFixed(4) + "°s\n"
 
                 debug.text =
