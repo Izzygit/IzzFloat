@@ -1860,7 +1860,7 @@ static void float_thd(void *arg) {
 			float surge_anglemin = 0.7; // Minimum d->proportional required to ensure we are continuously at an acceleration angle
 			double surge_steps = surge_ramp*d->float_conf.hertz;
 			float duty_increment = (float)(1.9531* pow(surge_steps, -0.966)); //Formula to calc increment based on time to 90% target value, +/-5% error
-			float surge_maxanglespeed = 100; // Max speed the nose can travel back to center
+			float surge_maxanglespeed = 40; // Max speed the nose can travel back to center
 			float surge_maxdiff = surge_maxanglespeed / d->float_conf.hertz;
 			
 			//no longer used float new_duty_value = 0; 
@@ -1901,7 +1901,7 @@ static void float_thd(void *arg) {
 			//Continue to engage surge only for the surge cycle portion of our surge period
 			if (d->surge){	
 				if (((d->current_time - d->surge_timer) > surge_cycle) ||		//Outside the surge cycle portion of the surge period
-				 ((SIGN(d->erpm) * d->proportional - surge_anglemin) > 0) ||		//The pitch is less than our minimum angle to ensure acceleration
+				 ((SIGN(d->erpm) * d->proportional - surge_anglemin) < 0) ||		//The pitch is less than our minimum angle to ensure acceleration
 				 (d->traction_control) ||							//In traction control
 				 ((surge_maxdiff + (SIGN(d->erpm) * d->differential)) > 0)){		//Travelling too fast back to center	
 					d->surge = false;
@@ -1943,7 +1943,7 @@ static void float_thd(void *arg) {
 				d->surge = false;		// Don't re-engage surge if we have left surge cycle until new surge period
 				//fault debug
 				if ((d->current_time - d->surge_timer) < surge_cycle) {
-					if ((SIGN(d->erpm) * d->proportional - surge_anglemin) > 0){
+					if ((SIGN(d->erpm) * d->proportional - surge_anglemin) < 0){
 						d->debug2= d->proportional; //The pitch is less than our minimum angle to ensure acceleration
 					}
 					if (d->traction_control) {	//In traction control
