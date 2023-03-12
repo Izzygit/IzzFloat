@@ -1878,6 +1878,9 @@ static void float_thd(void *arg) {
 					d->surge_timer = d->current_time; //Reset timer
 					d->presurge_duty = d->duty_cycle; //Set pre-surge duty
 					d->surge = true; //Indicates we are in the surge cycle of the surge period
+					d->debug2=0;
+					d->debug3=0;
+					d->debug7=0;
 				}
 			} else {
 				// Over continuous current for more than 3 seconds? Just beep, don't actually limit currents
