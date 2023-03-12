@@ -1872,9 +1872,9 @@ static void float_thd(void *arg) {
 			float surge_period = .75; //Period between each surge, in seconds. Prevents runaway and instability. 
 			float surge_cycle = d->float_conf.torquetilt_start_current/100; //UI in s*100
 			float surge_anglemin = d->float_conf.tiltback_variable;
-			float surge_maxanglespeed = 250 // Max speed the nose can travel back to center
+			float surge_maxanglespeed = 250; // Max speed the nose can travel back to center
 			float surge_maxdiff = surge_maxanglespeed / d->float_conf.hertz;
-			float current_margin = d->float_conf.noseangling_speed/10 //surge with less effort
+			float current_margin = d->float_conf.noseangling_speed/10; //surge with less effort
 			
 			//Debug temp
 			d->debug4 = surge_anglemin;
@@ -1908,7 +1908,7 @@ static void float_thd(void *arg) {
 			
 			// Increment the current or duty cycle with new values as required
 			if (d->surge){ 		
-				d->duty_cycle = d->duty_cycle * (0.8) + 0.2 // Increment duty during surge cycle to maximum
+				d->duty_cycle = d->duty_cycle * (0.8) + 0.2; // Increment duty during surge cycle to maximum
 			} else if (d->braking && (fabsf(d->pid_value - new_pid_value) > d->pid_brake_increment)) { // Brake Amp Rate Limiting
 				if (new_pid_value > d->pid_value) {
 					d->pid_value += d->pid_brake_increment;
