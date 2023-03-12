@@ -820,9 +820,9 @@ static void calculate_setpoint_target(data *d) {
 	}
 	
 	//Adjust acceleration limit for wheel slip condition if we are surging
-	double accel_limit = 30 
+	double accel_limit = 30;
 	if (d->surge){
-		accel_limit = 60
+		accel_limit = 60;
 	}
 	
 	if (d->setpointAdjustmentType == CENTERING && d->setpoint_target_interpolated != d->setpoint_target) {
@@ -1901,8 +1901,8 @@ static void float_thd(void *arg) {
 			//Continue to engage surge only for the surge cycle portion of our surge period
 			if (d->surge){	
 				if (((d->current_time - d->surge_timer) > surge_cycle) ||		//Outside the surge cycle portion of the surge period
-				 (SIGN(d->erpm) * d->proportional - surge_anglemin) > 0) ||		//The pitch is less than our minimum angle to ensure acceleration
-				 d->traction_control ||							//In traction control
+				 ((SIGN(d->erpm) * d->proportional - surge_anglemin) > 0) ||		//The pitch is less than our minimum angle to ensure acceleration
+				 (d->traction_control) ||							//In traction control
 				 ((surge_maxdiff + (SIGN(d->erpm) * d->differential)) > 0)){		//Travelling too fast back to center	
 					d->surge = false;
 				}
@@ -1944,9 +1944,9 @@ static void float_thd(void *arg) {
 				//fault debug
 				if ((d->current_time - d->surge_timer) < surge_cycle) {
 					if ((SIGN(d->erpm) * d->proportional - surge_anglemin) > 0){
-						d->debug2= d->proportional //The pitch is less than our minimum angle to ensure acceleration
+						d->debug2= d->proportional; //The pitch is less than our minimum angle to ensure acceleration
 					}
-					if d->traction_control {	//In traction control
+					if (d->traction_control) {	//In traction control
 						d->debug3 = 1;
 					}
 					if  ((surge_maxdiff + (SIGN(d->erpm) * d->differential)) > 0){	//Travelling too fast back to center	
