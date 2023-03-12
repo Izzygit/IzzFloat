@@ -260,14 +260,14 @@ Item {
                     "Surge Margin        : " + (float_braketilt * 100).toFixed(2) + "%\n" +
                     "Surge Cycle         : " + float_torquetilt.toFixed(3) + "s\n" +
                     "Surge Ramp          : " + float_turntilt.toFixed(4) + "s\n" +
-                    "Increment           : " + float_inputtilt.toFixed(4) + "\n"
+                    "Fault Diff          : " + float_inputtilt.toFixed(4) + "°s\n"
 
                 debug.text =
                     "Last Surge Time     : " + true_pitch.toFixed(0) + "s\n" +
                     "Current Time        : " + filtered_current.toFixed(0) + "s\n" +
                     "Pre-surge Duty      : " + float_acc_diff.toFixed(3) + "\n" +
                     "Last Surge Duty     : " + applied_booster_current.toFixed(3) + "\n" +
-                    "Pitch Diff          : " + (throttle_val * 100).toFixed(2) + "°\n"
+                    "Fault Traction      : " + (throttle_val * 100).toFixed(2) + "\n"
                 }
             }
         }
