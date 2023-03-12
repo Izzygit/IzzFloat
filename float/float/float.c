@@ -1874,7 +1874,7 @@ static void float_thd(void *arg) {
 			float surge_minangle = d->float_conf.tiltback_variable;
 			float surge_maxanglespeed = d->float_conf.torquetilt_start_current*10; // Max speed the nose can travel back to center
 			float surge_maxdiff = surge_maxanglespeed / d->float_conf.hertz;
-			float current_margin = /10; //surge with less effort
+			float current_margin = 0.99; //surge with less effort
 			float surge_maxangle = 18; //maximum nose down angle
 			float surge_maxscale = d->float_conf.noseangling_speed; // increase scale of the differential safety father from setpoint 
 			float surge_anglescale;
