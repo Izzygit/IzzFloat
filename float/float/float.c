@@ -1939,13 +1939,13 @@ static void float_thd(void *arg) {
 				d->surge = false;		// Don't re-engage surge if we have left surge cycle until new surge period
 				//fault debug
 				if ((d->current_time - d->surge_timer) < surge_cycle) {
-					if ((-1 * SIGN(d->erpm) * d->proportional - surge_minangle) < 0){
+					if ((((-1) * SIGN(d->erpm) * d->proportional) - surge_minangle) < 0){
 						d->debug2= d->proportional; //The pitch is less than our minimum angle to ensure acceleration
 					}
 					if (d->traction_control) {	//In traction control
 						d->debug3 = 1;
 					}
-					if  ((surge_maxdiff + (SIGN(d->erpm) * d->differential)) < 0){	//Travelling too fast back to center	
+					if  (surge_maxdiff * surge_anglescale + (SIGN(d->erpm) * d->differential ) < 0){	//Travelling too fast back to center	
 						d->debug7 = d->differential;
 					}
 				}
