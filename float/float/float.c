@@ -1860,7 +1860,7 @@ static void float_thd(void *arg) {
 			float surge_anglemin = 0.7; // Minimum d->proportional required to ensure we are continuously at an acceleration angle
 			double surge_steps = surge_ramp*d->float_conf.hertz;
 			float duty_increment = (float)(1.9531* pow(surge_steps, -0.966)); //Formula to calc increment based on time to 90% target value, +/-5% error
-			float surge_maxanglespeed = 40; // Max speed the nose can travel back to center
+			float surge_maxanglespeed = 100; // Max speed the nose can travel back to center
 			float surge_maxdiff = surge_maxanglespeed / d->float_conf.hertz;
 			
 			//no longer used float new_duty_value = 0; 
@@ -1868,7 +1868,7 @@ static void float_thd(void *arg) {
 			//Debug temp
 			d->debug4 = surge_margin;
 			d->debug5 = surge_cycle;
-			d->debug6 = surge_ramp;
+			d->debug6 = d->differential;
 			
 				
 			if (fabsf(new_pid_value) > current_limit) { //Check for current limit and surge
@@ -1901,9 +1901,9 @@ static void float_thd(void *arg) {
 			//Continue to engage surge only for the surge cycle portion of our surge period
 			if (d->surge){	
 				if (((d->current_time - d->surge_timer) > surge_cycle) ||		//Outside the surge cycle portion of the surge period
-				 ((SIGN(d->erpm) * d->proportional - surge_anglemin) < 0) ||		//The pitch is less than our minimum angle to ensure acceleration
+				 //((SIGN(d->erpm) * d->proportional - surge_anglemin) < 0) ||		//The pitch is less than our minimum angle to ensure acceleration
 				 (d->traction_control) ||							//In traction control
-				 ((surge_maxdiff + (SIGN(d->erpm) * d->differential)) > 0)){		//Travelling too fast back to center	
+				 ((surge_maxdiff + (SIGN(d->erpm) * d->differential)) < 0)){		//Travelling too fast back to center	
 					d->surge = false;
 				}
 			}					
@@ -1949,7 +1949,7 @@ static void float_thd(void *arg) {
 					if (d->traction_control) {	//In traction control
 						d->debug3 = 1;
 					}
-					if  ((surge_maxdiff + (SIGN(d->erpm) * d->differential)) > 0){	//Travelling too fast back to center	
+					if  ((surge_maxdiff + (SIGN(d->erpm) * d->differential)) < 0){	//Travelling too fast back to center	
 						d->debug7 = d->differential;
 					}
 					
