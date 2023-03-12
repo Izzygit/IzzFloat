@@ -1867,19 +1867,20 @@ static void float_thd(void *arg) {
 					}
 				}
 			}
-			
+		
 			//Start Surge
 			float surge_period = .75; //Period between each surge, in seconds. Prevents runaway and instability. 
 			float surge_cycle = d->float_conf.torquetilt_start_current/100; //UI in s*100
-			float surge_anglemin = d->float_conf.tiltback_variable;
+			float surge_minangle = d->float_conf.tiltback_variable;
 			float surge_maxanglespeed = 250; // Max speed the nose can travel back to center
 			float surge_maxdiff = surge_maxanglespeed / d->float_conf.hertz;
 			float current_margin = d->float_conf.noseangling_speed/10; //surge with less effort
-			float surge _maxangle = 18; //maximum nose down angle
+			float surge_maxangle = 18; //maximum nose down angle
 			float surge_maxscale = 5; // increase scale of safeties father from setpoint 
+			float surge_anglescale;
 			
 			//Debug temp
-			d->debug4 = surge_anglemin;
+			d->debug4 = surge_minangle;
 			d->debug5 = surge_cycle;
 			d->debug6 = surge_anglescale;
 				
@@ -1893,12 +1894,12 @@ static void float_thd(void *arg) {
 				d->debug3=0;
 				d->debug7=0;
 			}
-			surge_anglescale = (surge_maxscale-1)/(surge_maxangle-surge_minangle)*(d->proportional*(-1)*SIGN(d->erpm))+(surge_maxscale-1)/(surge_maxangle-surge_minangle)*(-1*surge_minangle)+1
+			surge_anglescale = (surge_maxscale-1)/(surge_maxangle-surge_minangle)*(d->proportional*(-1)*SIGN(d->erpm))+(surge_maxscale-1)/(surge_maxangle-surge_minangle)*(-1*surge_minangle)+1;
 			//Continue to engage surge only for the surge cycle portion of our surge period
 			if (d->surge){	
 				if (((d->current_time - d->surge_timer) > surge_cycle) ||		//Outside the surge cycle portion of the surge period
 				 (d->traction_control) ||						//In traction control
-				 (((((-1) * SIGN(d->erpm) * d->proportional) - surge_anglescale * surge_anglemin) < 0) &&	//The pitch is less than our minimum angle to ensure acceleration
+				 (((((-1) * SIGN(d->erpm) * d->proportional) - surge_anglescale * surge_minangle) < 0) &&	//The pitch is less than our minimum angle to ensure acceleration
 				 ((surge_maxdiff * surge_anglescale + (SIGN(d->erpm) * d->differential ) < 0)))){		//Travelling too fast back to center
 					d->surge = false;
 				}
@@ -1938,7 +1939,7 @@ static void float_thd(void *arg) {
 				d->surge = false;		// Don't re-engage surge if we have left surge cycle until new surge period
 				//fault debug
 				if ((d->current_time - d->surge_timer) < surge_cycle) {
-					if ((-1 * SIGN(d->erpm) * d->proportional - surge_anglemin) < 0){
+					if ((-1 * SIGN(d->erpm) * d->proportional - surge_minangle) < 0){
 						d->debug2= d->proportional; //The pitch is less than our minimum angle to ensure acceleration
 					}
 					if (d->traction_control) {	//In traction control
