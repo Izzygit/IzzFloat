@@ -1840,7 +1840,7 @@ static void float_thd(void *arg) {
 				new_pid_value += pid_mod;
 			}
 			
-			// Current Limiting! Updated with acceleration surge code.
+			// Current Limiting!
 			float current_limit;
 
 			if (d->braking) {
@@ -1850,38 +1850,8 @@ static void float_thd(void *arg) {
 				current_limit = d->mc_current_max * (1 + 0.6 * fabsf(d->torqueresponse_interpolated / 10));
 			}
 			
-			float surge_margin = 1; //Increased duty, in percent
-			float surge_period = .75; //Period between each surge, in seconds. Prevents runaway and instability. 
-			//stolen interface- Turn Tiltback ERPM Threshold //float surge_cycle = 0.1; //How much of the period with be at surge duty, in seconds. 0 to disable
-			float surge_cycle = d->float_conf.torquetilt_start_current/100; //UI in s*100
-			//stolen interface- Nose Angling Speed //float surge_ramp = 0.033; //How long until reaching 90% maximum surge duty, in seconds. 0 < surge_ramp <= surge_cycle
-			float surge_ramp = d->float_conf.noseangling_speed/1000; //UI in ms
-			//stolen interface- Variable Tiltback rate // float surge_anglemin = 0.5; // Minimum d->proportional required to ensure we are continuously at an acceleration angle
-			float surge_anglemin = d->float_conf.tiltback_variable;
-			double surge_steps = surge_ramp*d->float_conf.hertz;
-			float duty_increment = (float)(1.9531* pow(surge_steps, -0.966)); //Formula to calc increment based on time to 90% target value, +/-5% error
-			float surge_maxanglespeed = 400; // Max speed the nose can travel back to center
-			float surge_maxdiff = surge_maxanglespeed / d->float_conf.hertz;
-			
-			//no longer used float new_duty_value = 0; 
-			
-			//Debug temp
-			d->debug4 = surge_anglemin;
-			d->debug5 = surge_cycle;
-			d->debug6 = duty_increment;
-			
-				
-			if (fabsf(new_pid_value) > current_limit) { //Check for current limit and surge
+			if (fabsf(new_pid_value) > current_limit) { //Check for current limit
 				new_pid_value = SIGN(new_pid_value) * current_limit; //Apply current limit
-				if (!d->braking && ((d->current_time - d->surge_timer) > surge_period)) { //Apply surge
-					// Don't surge for braking or during an active surge period
-					d->surge_timer = d->current_time; //Reset timer
-					d->presurge_duty = d->duty_cycle; //Set pre-surge duty
-					d->surge = true; //Indicates we are in the surge cycle of the surge period
-					d->debug2=0;
-					d->debug3=0;
-					d->debug7=0;
-				}
 			} else {
 				// Over continuous current for more than 3 seconds? Just beep, don't actually limit currents
 				if (fabsf(d->atr_filtered_current) < d->max_continuous_current) {
@@ -1897,12 +1867,36 @@ static void float_thd(void *arg) {
 					}
 				}
 			}
+			
+			//Start Surge
+			float surge_period = .75; //Period between each surge, in seconds. Prevents runaway and instability. 
+			float surge_cycle = d->float_conf.torquetilt_start_current/100; //UI in s*100
+			float surge_anglemin = d->float_conf.tiltback_variable;
+			float surge_maxanglespeed = 250 // Max speed the nose can travel back to center
+			float surge_maxdiff = surge_maxanglespeed / d->float_conf.hertz;
+			float current_margin = d->float_conf.noseangling_speed/10 //surge with less effort
+			
+			//Debug temp
+			d->debug4 = surge_anglemin;
+			d->debug5 = surge_cycle;
+			d->debug6 = current_margin;
 				
+			if ((fabsf(new_pid_value) > current_margin * current_limit) && 	// Current request is greater than current limit * margin
+			    (!d->braking) && 						//Not braking
+			    ((d->current_time - d->surge_timer) > surge_period)) { 	//Not during an active surge period
+				d->surge_timer = d->current_time; //Reset timer
+				d->presurge_duty = d->duty_cycle; //Set pre-surge duty
+				d->surge = true; //Indicates we are in the surge cycle of the surge period
+				d->debug2=0;
+				d->debug3=0;
+				d->debug7=0;
+			}
+			
 			//Continue to engage surge only for the surge cycle portion of our surge period
 			if (d->surge){	
 				if (((d->current_time - d->surge_timer) > surge_cycle) ||		//Outside the surge cycle portion of the surge period
 				 (d->traction_control) ||						//In traction control
-				 (((SIGN(d->erpm) * d->proportional - surge_anglemin) < 0) &&		//The pitch is less than our minimum angle to ensure acceleration
+				 (((-1 * SIGN(d->erpm) * d->proportional - surge_anglemin) < 0) &&	//The pitch is less than our minimum angle to ensure acceleration
 				 ((surge_maxdiff + (SIGN(d->erpm) * d->differential)) < 0))){		//Travelling too fast back to center	
 					d->surge = false;
 				}
@@ -1914,8 +1908,7 @@ static void float_thd(void *arg) {
 			
 			// Increment the current or duty cycle with new values as required
 			if (d->surge){ 		
-				d->duty_cycle = d->duty_cycle * (1-duty_increment) + (1) * duty_increment// (d->presurge_duty * (1 + surge_margin)) * duty_increment; 
-				// Increment duty during surge cycle based on pre-surge duty at start of cycle, surge margin, and ramp rate
+				d->duty_cycle = d->duty_cycle * (0.8) + 0.2 // Increment duty during surge cycle to maximum
 			} else if (d->braking && (fabsf(d->pid_value - new_pid_value) > d->pid_brake_increment)) { // Brake Amp Rate Limiting
 				if (new_pid_value > d->pid_value) {
 					d->pid_value += d->pid_brake_increment;
@@ -1943,7 +1936,7 @@ static void float_thd(void *arg) {
 				d->surge = false;		// Don't re-engage surge if we have left surge cycle until new surge period
 				//fault debug
 				if ((d->current_time - d->surge_timer) < surge_cycle) {
-					if ((SIGN(d->erpm) * d->proportional - surge_anglemin) < 0){
+					if ((-1 * SIGN(d->erpm) * d->proportional - surge_anglemin) < 0){
 						d->debug2= d->proportional; //The pitch is less than our minimum angle to ensure acceleration
 					}
 					if (d->traction_control) {	//In traction control
