@@ -1875,13 +1875,13 @@ static void float_thd(void *arg) {
 			float surge_maxanglespeed = 250; // Max speed the nose can travel back to center
 			float surge_maxdiff = surge_maxanglespeed / d->float_conf.hertz;
 			float current_margin = d->float_conf.noseangling_speed/10; //surge with less effort
-			float max_angle = 18; //maximum nose down angle
-			float max_anglescale = 5; // increase scale of safeties father from setpoint 
+			float surge _maxangle = 18; //maximum nose down angle
+			float surge_maxscale = 5; // increase scale of safeties father from setpoint 
 			
 			//Debug temp
 			d->debug4 = surge_anglemin;
 			d->debug5 = surge_cycle;
-			d->debug6 = current_margin;
+			d->debug6 = surge_anglescale;
 				
 			if ((fabsf(new_pid_value) > current_margin * current_limit) && 	// Current request is greater than current limit * margin
 			    (!d->braking) && 						//Not braking
@@ -1893,13 +1893,13 @@ static void float_thd(void *arg) {
 				d->debug3=0;
 				d->debug7=0;
 			}
-			surge_anglescale = (surge_maxangle - (SIGN(d->erpm)* d->proportional * (-1)) - surge_minagle) / (surge_maxangle - surge_minangle)))
+			surge_anglescale = (surge_maxscale-1)/(surge_maxangle-surge_minangle)*(d->proportional*(-1)*SIGN(d->erpm))+(surge_maxscale-1)/(surge_maxangle-surge_minangle)*(-1*surge_minangle)+1
 			//Continue to engage surge only for the surge cycle portion of our surge period
 			if (d->surge){	
 				if (((d->current_time - d->surge_timer) > surge_cycle) ||		//Outside the surge cycle portion of the surge period
 				 (d->traction_control) ||						//In traction control
-				 ((((-1) * SIGN(d->erpm) * d->proportional) - surge_anglescale * surge_anglemin) < 0) &&	//The pitch is less than our minimum angle to ensure acceleration
-				 ((surge_maxdiff * surge_anglescale + (SIGN(d->erpm) * d->differential ) < 0))){		//Travelling too fast back to center
+				 (((((-1) * SIGN(d->erpm) * d->proportional) - surge_anglescale * surge_anglemin) < 0) &&	//The pitch is less than our minimum angle to ensure acceleration
+				 ((surge_maxdiff * surge_anglescale + (SIGN(d->erpm) * d->differential ) < 0)))){		//Travelling too fast back to center
 					d->surge = false;
 				}
 			}					
