@@ -1868,25 +1868,25 @@ static void float_thd(void *arg) {
 				}
 			}
 		
-			//Start Surge
+			//Start Surge Code
 			float surge_period = .75; //Period between each surge, in seconds. Prevents runaway and instability. 
-			float surge_cycle = .25; //UI in s*100
-			float surge_minangle = d->float_conf.tiltback_variable;
-			float surge_maxanglespeed = d->float_conf.torquetilt_start_current*10; // Max speed the nose can travel back to center
-			float surge_maxdiff = surge_maxanglespeed / d->float_conf.hertz;
-			float current_margin = 0.99; //surge with less effort
-			float surge_maxangle = 18; //maximum nose down angle
-			float surge_maxscale = d->float_conf.noseangling_speed; // increase scale of the differential safety father from setpoint 
-			float surge_anglescale;
+			float surge_cycle = .25; //Length of surge, in seconds
+			float surge_minangle = d->float_conf.tiltback_variable; //Minium angle to allow surge
+			float surge_maxanglespeed = d->float_conf.torquetilt_start_current*10; // Max speed the nose can travel back to center at minangle
+			float surge_maxdiff = surge_maxanglespeed / d->float_conf.hertz; //convert from degrees/second to degrees/step
+			float current_margin = 0.99; //Lower current threshold to surge with less effort
+			float surge_maxangle = 18; //maximum nose down angle. Does not need to be precise. Used to make a curve for maxanglespeed
+			float surge_maxscale = d->float_conf.noseangling_speed; // increase scale of maxangle speed father from minangle, up to maxscale at maxangle
 			
-			//Debug temp
+			//Debug temporary
 			d->debug4 = surge_minangle;
 			d->debug5 = surge_maxanglespeed;
-							
+			
+			//Initialize Surge Cycle
 			if ((fabsf(new_pid_value) > current_margin * current_limit) && 	// Current request is greater than current limit * margin
 			    (!d->braking) && 						//Not braking
 			    ((d->current_time - d->surge_timer) > surge_period)) { 	//Not during an active surge period
-				d->surge_timer = d->current_time; //Reset timer
+				d->surge_timer = d->current_time; //Reset surge timer
 				d->presurge_duty = d->duty_cycle; //Set pre-surge duty
 				d->surge = true; //Indicates we are in the surge cycle of the surge period
 				d->debug2=0;
@@ -1894,12 +1894,15 @@ static void float_thd(void *arg) {
 				d->debug7=0;
 				d->debug6=0;
 			}
-			surge_anglescale = (surge_maxscale-1)/(surge_maxangle-surge_minangle)*(fabsf(d->proportional))+(surge_maxscale-1)/(surge_maxangle-surge_minangle)*(-1*surge_minangle)+1;
-			//Continue to engage surge only for the surge cycle portion of our surge period
+			
+			//Creates a curve between points (minangle, 1) and (maxangle, maxscale) and calculates based on x = fabsf(d->proportional) to scale maxanglespeed below
+			float surge_anglescale = (surge_maxscale-1)/(surge_maxangle-surge_minangle)*(fabsf(d->proportional))+(surge_maxscale-1)/(surge_maxangle-surge_minangle)*(-1*surge_minangle)+1;
+			
+			//Conditions that will cause surge cycle to end
 			if (d->surge){	
 				if (((d->current_time - d->surge_timer) > surge_cycle) ||		//Outside the surge cycle portion of the surge period
 				 (d->traction_control) ||						//In traction control
-				 ((SIGN(d->erpm) * d->proportional - surge_minangle) < 0) ||	//The pitch is less than our minimum angle to ensure acceleration
+				 ((SIGN(d->erpm) * d->proportional - surge_minangle) < 0) ||		//The pitch is less than our minimum angle
 				 ((surge_maxdiff * surge_anglescale + (SIGN(d->erpm) * d->differential ) < 0))){	//Travelling too fast back to center
 					d->surge = false;
 				}
@@ -1939,7 +1942,7 @@ static void float_thd(void *arg) {
 				d->surge = false;		// Don't re-engage surge if we have left surge cycle until new surge period
 				//fault debug
 				if (((d->current_time - d->surge_timer) < surge_cycle) &&
-				    (fabsf(d->debug2 + d->debug3 + d->debug7)==0)){
+				    (d->debug2 + d->debug3 + d->debug7==0)){
 					if ((SIGN(d->erpm) * d->proportional - surge_minangle) < 0){
 						d->debug2= d->proportional; //The pitch is less than our minimum angle to ensure acceleration
 					}
