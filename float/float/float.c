@@ -1940,7 +1940,7 @@ static void float_thd(void *arg) {
 				d->surge = false;		// Don't re-engage surge if we have left surge cycle until new surge period
 				//fault debug
 				if (((d->current_time - d->surge_timer) < surge_cycle) && //If we are still in the surge cycle
-				    (d->debug2 + d->debug3 ==0)){				//We have not registered the reason for exiting surge yet
+				    (d->debug2 + d->debug3 == 0 )){				//We have not registered the reason for exiting surge yet
 					if ((SIGN(d->erpm) * d->proportional - surge_minangle) < 0){
 						d->debug3= d->proportional; //The pitch is less than our minimum angle to ensure acceleration
 					}
@@ -2183,11 +2183,11 @@ static void send_realtime_data(data *d){
 	buffer_append_float32_auto(send_buffer, d->debug7, &ind); //Added for surge debug
 	buffer_append_float32_auto(send_buffer, d->debug1, &ind); //Added for surge debug
 	buffer_append_float32_auto(send_buffer, d->debug3, &ind); //Added for surge debug
-	buffer_append_float32_auto(send_buffer, d->debug2, &ind); //Added for surge debug
 //Changed temporarily	buffer_append_float32_auto(send_buffer, d->applied_booster_current, &ind);
 	buffer_append_float32_auto(send_buffer, d->motor_current, &ind);
 //Changed temporarily	buffer_append_float32_auto(send_buffer, d->throttle_val, &ind);
-
+	buffer_append_float32_auto(send_buffer, d->debug2, &ind); //Added for surge debug
+	
 	if (ind > BUFSIZE) {
 		VESC_IF->printf("BUFSIZE too small...\n");
 	}
