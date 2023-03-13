@@ -206,7 +206,6 @@ typedef struct {
 	float rc_current;
 	
 	// Feature: Surge
-	float presurge_duty;
 	float surge_timer;
 	bool surge;
 	float differential;
@@ -217,7 +216,7 @@ typedef struct {
 	float debug5;
 	float debug6;
 	float debug7;
-		
+	
 	// Log values
 	float float_setpoint, float_atr, float_braketilt, float_torquetilt, float_turntilt, float_inputtilt;
 	float float_expected_acc, float_measured_acc, float_acc_diff;
@@ -1871,28 +1870,28 @@ static void float_thd(void *arg) {
 			//Start Surge Code
 			float surge_period = .75; //Period between each surge, in seconds. Prevents runaway and instability. 
 			float surge_cycle = .25; //Length of surge, in seconds
-			float surge_minangle = d->float_conf.tiltback_variable; //Minium angle to allow surge
-			float surge_maxanglespeed = d->float_conf.torquetilt_start_current*10; // Max speed the nose can travel back to center at minangle
+			float surge_minangle = d->float_conf.turntilt_start_angle; //Minium angle to allow surge
+			float surge_maxanglespeed = d->float_conf.turntilt_erpm_boost; // Max speed the nose can travel back to center at minangle
 			float surge_maxdiff = surge_maxanglespeed / d->float_conf.hertz; //convert from degrees/second to degrees/step
-			float current_margin = 0.99; //Lower current threshold to surge with less effort
+			float current_margin = d->float_conf.turntilt_erpm_boost; //.99; //Lower current threshold to surge with less effort
 			float surge_maxangle = 18; //maximum nose down angle. Does not need to be precise. Used to make a curve for maxanglespeed
-			float surge_maxscale = d->float_conf.noseangling_speed; // increase scale of maxangle speed father from minangle, up to maxscale at maxangle
+			float surge_maxscale = d->float_conf.turntilt_speed; //5; // increase scale of maxangle speed when father from minangle, up to maxscale*maxanglespeed at maxangle
 			
 			//Debug temporary
 			d->debug4 = surge_minangle;
 			d->debug5 = surge_maxanglespeed;
-			
+			d->debug6 = current_margin;
+				
 			//Initialize Surge Cycle
 			if ((fabsf(new_pid_value) > current_margin * current_limit) && 	// Current request is greater than current limit * margin
 			    (!d->braking) && 						//Not braking
 			    ((d->current_time - d->surge_timer) > surge_period)) { 	//Not during an active surge period
 				d->surge_timer = d->current_time; //Reset surge timer
-				d->presurge_duty = d->duty_cycle; //Set pre-surge duty
 				d->surge = true; //Indicates we are in the surge cycle of the surge period
+				d->debug7 = d->duty_cycle; //Set pre-surge duty
 				d->debug2=0;
 				d->debug3=0;
 				d->debug7=0;
-				d->debug6=0;
 			}
 			
 			//Creates a curve between points (minangle, 1) and (maxangle, maxscale) and calculates based on x = fabsf(d->proportional) to scale maxanglespeed below
@@ -1914,7 +1913,7 @@ static void float_thd(void *arg) {
 			
 			// Increment the current or duty cycle with new values as required
 			if (d->surge){ 		
-				d->duty_cycle = d->duty_cycle * (0.8) + 0.2; // Increment duty during surge cycle to maximum
+				d->duty_cycle = d->duty_cycle * 0.8 + 0.2; // Increment duty during surge cycle to maximum
 			} else if (d->braking && (fabsf(d->pid_value - new_pid_value) > d->pid_brake_increment)) { // Brake Amp Rate Limiting
 				if (new_pid_value > d->pid_value) {
 					d->pid_value += d->pid_brake_increment;
@@ -1941,17 +1940,17 @@ static void float_thd(void *arg) {
 				set_current(d, d->pid_value); // If we are in traction control, tilted back, or not surging, set current as normal.
 				d->surge = false;		// Don't re-engage surge if we have left surge cycle until new surge period
 				//fault debug
-				if (((d->current_time - d->surge_timer) < surge_cycle) &&
-				    (d->debug2 + d->debug3 + d->debug7==0)){
+				if (((d->current_time - d->surge_timer) < surge_cycle) && //If we are still in the surge cycle
+				    (d->debug2 + d->debug3 ==0)){				//We have not registered the reason for exiting surge yet
 					if ((SIGN(d->erpm) * d->proportional - surge_minangle) < 0){
-						d->debug2= d->proportional; //The pitch is less than our minimum angle to ensure acceleration
+						d->debug3= d->proportional; //The pitch is less than our minimum angle to ensure acceleration
 					}
 					if (d->traction_control) {	//In traction control
-						d->debug3 = 1;
+						d->debug3 = 100;
 					}
 					if  (surge_maxdiff * surge_anglescale + (SIGN(d->erpm) * d->differential ) < 0){	//Travelling too fast back to center	
-						d->debug7 = d->differential;
-						d->debug6 = surge_anglescale;
+						d->debug2 = d->differential*832*(-1)*SIGN(d->erpm);
+						d->debug3 = d->proportional;
 					}
 				}
 			}
@@ -2172,24 +2171,22 @@ static void send_realtime_data(data *d){
 	//Changed temporarily	buffer_append_float32_auto(send_buffer, d->float_braketilt, &ind);
 	//Changed temporarily	buffer_append_float32_auto(send_buffer, d->float_torquetilt, &ind);
 	//Changed temporarily	buffer_append_float32_auto(send_buffer, d->float_turntilt, &ind);
-	//Changed temporarily	buffer_append_float32_auto(send_buffer, d->float_inputtilt, &ind);
 	buffer_append_float32_auto(send_buffer, d->debug4, &ind);//Added for surge debug
 	buffer_append_float32_auto(send_buffer, d->debug5, &ind);//Added for surge debug
 	buffer_append_float32_auto(send_buffer, d->debug6, &ind);//Added for surge debug
-	buffer_append_float32_auto(send_buffer, d->debug7, &ind);//Added for surge debug
+	buffer_append_float32_auto(send_buffer, d->float_inputtilt, &ind);
 	
 	// DEBUG
 //Changed temporarily	buffer_append_float32_auto(send_buffer, d->true_pitch_angle, &ind);
 //Changed temporarily	buffer_append_float32_auto(send_buffer, d->atr_filtered_current, &ind);
 //Changed temporarily	buffer_append_float32_auto(send_buffer, d->float_acc_diff, &ind);
-	buffer_append_float32_auto(send_buffer, d->surge_timer , &ind); //Added for surge debug
-	buffer_append_float32_auto(send_buffer, d->current_time, &ind); //Added for surge debug
-	buffer_append_float32_auto(send_buffer, d->presurge_duty, &ind); //Added for surge debug
-	buffer_append_float32_auto(send_buffer, d->debug1 , &ind); //Added for surge debug
+	buffer_append_float32_auto(send_buffer, d->current_time - d->surge_timer , &ind); //Added for surge debug
+	buffer_append_float32_auto(send_buffer, d->debug7, &ind); //Added for surge debug
+	buffer_append_float32_auto(send_buffer, d->debug1, &ind); //Added for surge debug
+	buffer_append_float32_auto(send_buffer, d->debug3, &ind); //Added for surge debug
 	buffer_append_float32_auto(send_buffer, d->debug2, &ind); //Added for surge debug
-	buffer_append_float32_auto(send_buffer, d->debug3/100, &ind); //Added for surge debug
 //Changed temporarily	buffer_append_float32_auto(send_buffer, d->applied_booster_current, &ind);
-//Changed temporarily	buffer_append_float32_auto(send_buffer, d->motor_current, &ind);
+	buffer_append_float32_auto(send_buffer, d->motor_current, &ind);
 //Changed temporarily	buffer_append_float32_auto(send_buffer, d->throttle_val, &ind);
 
 	if (ind > BUFSIZE) {
