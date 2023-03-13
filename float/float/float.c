@@ -1894,7 +1894,7 @@ static void float_thd(void *arg) {
 						
 			//Conditions that will cause surge cycle to end
 			if (d->surge){	
-				float surge_anglescale = fminf(surge_maxscale, fansf(d->proportional/surge_minangle)); //Used to scale maxdiff for angles larger than minangle, up to maxscale
+				float surge_anglescale = fminf(surge_maxscale, fabsf(d->proportional/surge_minangle)); //Used to scale maxdiff for angles larger than minangle, up to maxscale
 				if (((d->current_time - d->surge_timer) > surge_cycle) ||		//Outside the surge cycle portion of the surge period
 				 (d->traction_control) ||						//In traction control
 				 ((SIGN(d->erpm) * d->proportional - surge_minangle) < 0) ||		//The pitch is less than our minimum angle
