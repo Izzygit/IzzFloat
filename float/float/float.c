@@ -1873,7 +1873,7 @@ static void float_thd(void *arg) {
 			float surge_minangle = d->float_conf.turntilt_start_angle; //Minium angle to allow surge
 			float surge_maxanglespeed = d->float_conf.turntilt_start_erpm; // Max speed the nose can travel back to center at minangle
 			float surge_maxdiff = surge_maxanglespeed / d->float_conf.hertz; //convert from degrees/second to degrees/step
-			float current_margin = d->float_conf.turntilt_yaw_aggregate/100; //.99; //Lower current threshold to surge with less effort
+			float current_margin = d->float_conf.turntilt_yaw_aggregate / 100; //.99; //Lower current threshold to surge with less effort
 			float surge_maxangle = 18; //maximum nose down angle. Does not need to be precise. Used to make a curve for maxanglespeed
 			float surge_maxscale = d->float_conf.turntilt_speed; //5; // increase scale of maxangle speed when father from minangle, up to maxscale*maxanglespeed at maxangle
 			
