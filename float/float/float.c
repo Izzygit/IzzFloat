@@ -1871,7 +1871,7 @@ static void float_thd(void *arg) {
 			float surge_period = .75; //Period between each surge, in seconds. Prevents runaway and instability. 
 			float surge_cycle = .25; //Length of surge, in seconds
 			float surge_minangle = d->float_conf.turntilt_start_angle; //Minium angle to allow surge
-			float surge_maxanglespeed = d->float_conf.turntilt_erpm_boost; // Max speed the nose can travel back to center at minangle
+			float surge_maxanglespeed = d->float_conf.turntilt_start_erpm; // Max speed the nose can travel back to center at minangle
 			float surge_maxdiff = surge_maxanglespeed / d->float_conf.hertz; //convert from degrees/second to degrees/step
 			float current_margin = d->float_conf.turntilt_erpm_boost; //.99; //Lower current threshold to surge with less effort
 			float surge_maxangle = 18; //maximum nose down angle. Does not need to be precise. Used to make a curve for maxanglespeed
