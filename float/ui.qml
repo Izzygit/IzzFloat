@@ -258,16 +258,16 @@ Item {
                     "Setpoint            : " + float_setpoint.toFixed(2) + "°\n" +
                     "ATR Setpoint        : " + float_atr.toFixed(2) + "°\n" +
                     "Surge Angle Min     : " + (float_braketilt).toFixed(2) + "°\n" +
-                    "Max Angle Speed     : " + float_torquetilt.toFixed(3) + "°s\n" +
-                    "Angle Scale         : " + float_turntilt.toFixed(4) + "\n" +
-                    "Fault Diff          : " + float_inputtilt.toFixed(4) + "°s\n"
+                    "Max Angle Speed     : " + float_torquetilt.toFixed(0) + "° / s\n" +
+                    "Current Margin      : " + float_turntilt.toFixed(2) + "\n" +
+                    "Inputtilt Setpoint  : " + float_inputtilt.toFixed(2) + "°\n"
 
                 debug.text =
                     "Last Surge Time     : " + true_pitch.toFixed(0) + "s\n" +
-                    "Current Time        : " + filtered_current.toFixed(0) + "s\n" +
-                    "Pre-surge Duty      : " + float_acc_diff.toFixed(3) + "\n" +
-                    "Last Surge Duty     : " + applied_booster_current.toFixed(3) + "\n" +
-                    "Fault Traction      : " + (throttle_val * 100).toFixed(2) + "\n"
+                    "Pre-surge Duty      : " + filtered_current.toFixed(3) + "\n" +
+                    "Last Surge Duty     : " + float_acc_diff.toFixed(3) + "\n" +
+                    "Fault Angle/Traction: " + applied_booster_current.toFixed(2) + "°\n" +
+                    "Fault Angle Speed   : " + throttle_val.toFixed(0) + "° / s\n"
                 }
             }
         }
