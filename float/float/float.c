@@ -1523,7 +1523,7 @@ static void set_current(data *d, float current){
 static void set_dutycycle(data *d, float dutyCyle){
 	// Limit duty output to configured max output
 	if (dutyCyle >  VESC_IF->get_cfg_float(CFG_PARAM_l_max_duty)) {
-		dutyCyle = VESC_IF->get_cfg_float(CFG_PARAM_l_current_max);
+		dutyCyle = VESC_IF->get_cfg_float(CFG_PARAM_l_max_duty);
 	} 
 
 	// Reset the timeout
