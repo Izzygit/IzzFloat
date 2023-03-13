@@ -249,7 +249,7 @@ Item {
 
                 rt_data.text =
                     "Current (Requested) : " + pid_value.toFixed(2) + "A\n" +
-                    "Fault last angle    : " + motor_current.toFixed(2) + "°\n" +
+                    "Current (Motor)     : " + motor_current.toFixed(2) + "A\n" +
                     "Pitch               : " + pitch.toFixed(2) + "°\n" +
                     "Roll                : " + roll.toFixed(2) + "°\n" +
                     "ADC1 / ADC2         : " + adc1.toFixed(2) + "V / " + adc2.toFixed(2) + "V\n"
